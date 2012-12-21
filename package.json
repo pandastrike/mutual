@@ -1,0 +1,25 @@
+{
+  "name": "mutual",
+  "version": "0.0.0",
+  "description": "Scala-inspired Actors that use Redis as a message transport",
+  "main": "src/mutual.js",
+  "scripts": {
+    "test": "rake test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/dyoder/mutual.git"
+  },
+  "keywords": [
+    "scala",
+    "actor",
+    "channel",
+    "redis",
+    "message",
+    "distributed",
+    "worker"
+  ],
+  "author": "Dan Yoder",
+  "license": "BSD",
+  "readmeFilename": "README.md"
+}
