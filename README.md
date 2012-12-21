@@ -1,3 +1,3 @@
 # Mutual
 
-Allows you to manage tasks using Redis as a message transport.
+Mutual is inspired by Scala's Actor model. Concurrency is managed by setting up Channels between participants. Remote channels are implemented by using Redis as a transport.
