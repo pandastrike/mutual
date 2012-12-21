@@ -20,9 +20,10 @@ class EventChannel extends Channel
     @channels[event].receive handler
 
   once: (event, handler) ->
-    on event, =>
+    _handler = =>
       handler()
-      @remove event, handler
+      @remove event, _handler
+    on event, _handler
         
   remove: (event, handler) ->
     @channels[event]?.remove handler
