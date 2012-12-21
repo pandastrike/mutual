@@ -21,21 +21,23 @@ class Channel
         keepers.push _handler
     @handlers = keepers
     
-  forward: (channel) ->
+  forward: (channel,name) ->
+    if name?
+      message = merge message, event: "#{name}.#{message.event}"
     @receive (message) =>
       channel.fire message
     
   source: (args...) ->
     [name,block] = switch args.length
       when 0 then [null,null]
-      when 1 then
+      when 1 
         switch (type args[0])
           when "string" then [args[0],null]
           when "function" then [null,args[0]]
       else args
     
     channel = new Channel name
-    channel.forward @
+    channel.forward @, @name
     block channel if block?
     channel    
     

@@ -4,10 +4,10 @@ redis = require "redis"
 
 EventChannel = require "event-channel"
 
-class RedisTransport extends EventChannel
- 
+class RedisTransport 
+  
   constructor: (options) ->
-    {@events,@name} = options
+    @events = options.events.source "redis-transport"
     poolEvents = @events.source "pool"
     @clients = Pool 
       name: "redis-transport", max: 10
@@ -19,27 +19,23 @@ class RedisTransport extends EventChannel
       destroy: (client) => client.quit()
       log: (string,level) => poolEvents.fire event: level, content: string
   
-  send: (message) ->
+  publish: (message) ->
     @events.source "publish", (publishEvents) =>
       {channel,id} = message
       @_acquire (client) =>
-        ch.once "*", => @clients.release client
+        publishEvents.once "*", => @clients.release client
         client.publish channel, JSON.stringify(message), publishEvents.callback
 
-  run: -> 
-    @run = => # no-op / idempotent
-    @_acquire (client) =>
-      client.subscribe @name
-      client.on "message", (channel,json) =>
-        ch.safely =>
-          message = JSON.parse json
-          @fire message
-          @stop = =>
-            client.unsubscribe => @clients.release client
-            @stop = => # no-op / idempotent
-  
-  stop: => # no-op until you've run something
-    
+  subscribe: (name) ->
+    @events.source "subscribe", (subscribeEvents) =>
+      @_acquire (client) =>
+        client.subscribe name
+        client.on "message", (channel,json) =>
+          subscribeEvents.safely =>
+            message = JSON.parse json
+            subscribeEvents.@fire event: message, content: message
+        subscribeEvents.on "unsubscribe", =>
+          client.unsubscribe => @clients.release client
   
   _acquire: (handler) ->
     @bus.channel "client", (ch) =>

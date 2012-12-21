@@ -23,18 +23,10 @@ class EventChannel extends Channel
     _handler = =>
       handler()
       @remove event, _handler
-    on event, _handler
+    @on event, _handler
         
   remove: (event, handler) ->
     @channels[event]?.remove handler
-
-  forward: (channel) ->
-    if @name?
-      @receive (message) =>
-        channel.fire (merge message,
-            event: "#{@name}.#{message.event}")
-    else
-      super
 
   @reader "callback", ->
     # memoize the getter ...
@@ -62,7 +54,7 @@ class EventChannel extends Channel
     try
       fn()
     catch error
-      @send event: "error", (toError error)
+      @send event: "error", content: (toError error)
 
 module.exports = EventChannel
   
