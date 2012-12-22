@@ -1,3 +1,5 @@
+{type} = require "fairmont"
+
 class Channel
   
   constructor: (@name) ->
@@ -21,9 +23,7 @@ class Channel
         keepers.push _handler
     @handlers = keepers
     
-  forward: (channel,name) ->
-    if name?
-      message = merge message, event: "#{name}.#{message.event}"
+  forward: (channel) ->
     @receive (message) =>
       channel.fire message
     
@@ -36,9 +36,9 @@ class Channel
           when "function" then [null,args[0]]
       else args
     
-    channel = new Channel name
+    channel = new @constructor name
     channel.forward @, @name
-    block channel if block?
+    (block channel) if block?
     channel    
     
   package: (message) ->

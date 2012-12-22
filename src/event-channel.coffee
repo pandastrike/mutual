@@ -24,7 +24,13 @@ class EventChannel extends Channel
       handler()
       @remove event, _handler
     @on event, _handler
-        
+
+  forward: (channel,name) ->
+    @receive (message) =>
+      if name?
+        message = merge message, event: "#{name}.#{message.event}"
+      channel.fire message
+
   remove: (event, handler) ->
     @channels[event]?.remove handler
 
