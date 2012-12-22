@@ -1,23 +1,15 @@
 EventChannel = require "../src/event-channel"
+helpers = require "./helpers"
+{testify,assert} = helpers
 
-channel = new EventChannel
+testify.test "An event channel", (context) ->
 
-channel.send event: "greeting", content: "hello"
+  context.test "can send and receive events", (context) ->
 
-# we can set this after we send the message, 
-# because ::send doesn't do anything until nextTick
-channel.on "greeting", (message) =>
-  console.log message.content
+    channel = new EventChannel
 
-{readFile} = require "fs"
+    channel.send event: "hello", content: "Dan"
 
-channel = new EventChannel
-
-readFile __filename, "utf-8", channel.callback
-readFile __filename+"x", "utf-8", channel.callback
-
-channel.on "success", (message) =>
-  console.log message.content
-
-channel.on "failure", (message) =>
-  console.log message.content
+    channel.on "hello", (message) =>
+      context.test "using an 'on' handler", ->
+        assert.ok message.content is "Dan"

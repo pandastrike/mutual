@@ -1,10 +1,13 @@
 Channel = require "../src/channel"
+helpers = require "./helpers"
+{testify,assert} = helpers
 
 channel = new Channel
 
-channel.send content: "hello"
+testify.test "A channel", (context) ->
 
-# we can set this after we send the message, 
-# because ::send doesn't do anything until nextTick
-channel.receive (message) =>
-  console.log message.content
+  channel.send content: "hello"
+
+  channel.receive (message) =>
+    context.test "can send and receive events", ->
+      assert.ok message.content is "hello"

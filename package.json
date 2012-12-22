@@ -26,5 +26,8 @@
     "generic-pool": "~2.0.2",
     "fairmont": "~0.1.1",
     "redis": "~0.8.2"
-  }
+  },
+  "dependencies": {
+    "testify": "~0.1.0"
+  }  
 }

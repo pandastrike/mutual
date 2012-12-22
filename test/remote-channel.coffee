@@ -1,25 +1,22 @@
 RemoteChannel = require "../src/remote-channel"
-EventChannel = require "../src/event-channel"
-Transport = require "../src/redis-transport"
+helpers = require "./helpers"
+{testify,assert} = helpers
+{options} = helpers.remote()
 
-events = new EventChannel
+testify.test "A remote channel", (context) ->
 
-options = 
-  name: "greeting"
-  transport: new Transport 
-    host: "localhost"
-    port: 6379
-    events: events
+  context.test "can send and receive events", (context) ->
+
+    sender = new RemoteChannel options
+
+    receiver = new RemoteChannel options
+    receiver.listen()
+
+    receiver.events.on "hello", (message) ->
+      context.test "using an 'on' handler", ->
+        assert.ok message.content is "Dan"
+        receiver.end()
+
+    sender.send event: "hello", content: "Dan"
 
 
-sender = new RemoteChannel options
-  
-receiver = new RemoteChannel options
-
-receiver.listen()
-
-receiver.events.on "hello", (message) ->
-  console.log "Hello, #{message.content}"
-  receiver.end()
-
-sender.send event: "hello", content: "Dan"

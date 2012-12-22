@@ -7,7 +7,7 @@ EventChannel = require "./event-channel"
 class RedisTransport 
   
   constructor: (options) ->
-    @events = options.events.source "redis-transport"
+    @events = options.events.source "transport"
     poolEvents = @events.source "pool"
     @clients = Pool 
       name: "redis-transport", max: 10
@@ -32,7 +32,7 @@ class RedisTransport
         client.subscribe name
         client.on "message", (channel,json) =>
           subscribe.safely =>
-            subscribe.fire (JSON.parse json)
+            subscribe.fire event: "message", content: (JSON.parse json)
         subscribe.on "unsubscribe", =>
           client.unsubscribe => @clients.release client
   

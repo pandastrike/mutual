@@ -29,7 +29,8 @@ class RemoteChannel extends EventChannel
   # Run means 'listen for messages on the network'
   listen: ->
     subscribe = @transport.subscribe @name
-    subscribe.forward @events
+    subscribe.on "message", (message) =>
+      @events.fire message.content
     @end = =>
       subscribe.fire event: "unsubscribe"
       @transport.end()

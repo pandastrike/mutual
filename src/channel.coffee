@@ -37,7 +37,7 @@ class Channel
       else args
     
     channel = new @constructor name
-    channel.forward @, @name
+    channel.forward @, name
     (block channel) if block?
     channel    
     
