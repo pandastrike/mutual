@@ -1,8 +1,9 @@
-{type} = require "fairmont"
+{type,overload} = require "fairmont"
+
 
 class Channel
   
-  constructor: (@name) ->
+  constructor: ->
     @handlers = []
   
   send: (message) ->
@@ -27,17 +28,9 @@ class Channel
     @receive (message) =>
       channel.fire message
     
-  source: (args...) ->
-    [name,block] = switch args.length
-      when 0 then [null,null]
-      when 1 
-        switch (type args[0])
-          when "string" then [args[0],null]
-          when "function" then [null,args[0]]
-      else args
-    
-    channel = new @constructor name
-    channel.forward @, name
+  source: (block) ->
+    channel = new @constructor
+    channel.forward @
     (block channel) if block?
     channel    
     

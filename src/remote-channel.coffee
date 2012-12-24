@@ -3,19 +3,19 @@
 Catalog.add "name-required", ->
   "Remote channels cannot be anonymous"
 
+Channel = require "./channel"
 EventChannel = require "./event-channel"
 
-class RemoteChannel extends EventChannel
+class RemoteChannel extends Channel
   
   constructor: (options) ->
-    {@name,@transport,events} = options
+    super
+    {@name,@transport} = options
     throw (toError "name-required") unless @name?
-    @events = if events?
-      events.source @name
-    else
-      new EventChannel @name
+    @events = new EventChannel
     
   package: (message) ->
+    message = super
     message.channel = @name
     message
     
@@ -28,12 +28,16 @@ class RemoteChannel extends EventChannel
   
   # Run means 'listen for messages on the network'
   listen: ->
-    subscribe = @transport.subscribe @name
-    subscribe.on "message", (message) =>
-      @events.fire message.content
-    @end = =>
-      subscribe.fire event: "unsubscribe"
-      @transport.end()
+    @events.source "listen", (listen) =>
+      subscribe = @transport.subscribe @name
+      # TODO: Not sure I love this -- feels like we're overloading
+      # the `subscribe` channel ... maybe a different message, ex: "ready"?
+      subscribe.on "success", -> listen.fire "success"
+      subscribe.on "message", (message) =>
+        @fire message.content
+      @end = =>
+        subscribe.fire event: "unsubscribe"
+        @transport.end()
     
 module.exports = RemoteChannel
   

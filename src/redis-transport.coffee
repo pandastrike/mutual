@@ -1,13 +1,12 @@
 redis = require "redis"
 {Pool} = require "generic-pool"
 {type,toError} = require "fairmont"
-
 EventChannel = require "./event-channel"
 
 class RedisTransport 
   
   constructor: (options) ->
-    @events = options.events.source "transport"
+    @events = new EventChannel
     poolEvents = @events.source "pool"
     @clients = Pool 
       name: "redis-transport", max: 10
@@ -29,7 +28,8 @@ class RedisTransport
   subscribe: (name) ->
     @events.source "subscribe", (subscribe) =>
       @_acquire (client) =>
-        client.subscribe name
+        client.subscribe name, ->
+          subscribe.fire event: "success"
         client.on "message", (channel,json) =>
           subscribe.safely =>
             subscribe.fire event: "message", content: (JSON.parse json)
