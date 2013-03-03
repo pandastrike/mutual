@@ -20,7 +20,7 @@ make = ->
 
 testify.test "A remote channel", (context) ->
 
-  context.test "can send and receive events", (context) ->
+  context.test "can send and receive messages", (context) ->
 
     sender = make()
     receiver = make()
