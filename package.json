@@ -1,8 +1,8 @@
 {
   "name": "mutual",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Scala-inspired Actors that use Redis as a message transport",
-  "main": "src/channel.coffee",
+  "main": "src/index.coffee",
   "scripts": {
     "test": "rake test"
   },
