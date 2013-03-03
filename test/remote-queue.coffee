@@ -1,5 +1,5 @@
 Transport = require "../src/redis-transport"
-RemoteChannel = require "../src/remote-channel"
+RemoteQueue = require "../src/remote-queue"
 helpers = require "./helpers"
 {testify,assert,events} = helpers
 
@@ -11,14 +11,14 @@ make = ->
 
   transport.events.forward events
 
-  channel = new RemoteChannel
+  channel = new RemoteQueue
     name: "greeting"
     transport: transport
       
   channel
 
 
-testify.test "A remote channel", (context) ->
+testify.test "A remote queue", (context) ->
 
   context.test "can send and receive events", (context) ->
 
