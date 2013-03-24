@@ -6,8 +6,8 @@ class Channel
   constructor: ->
     @handlers = []
   
-  send: (message) ->
-    process.nextTick => @fire message
+  send: (args...) ->
+    process.nextTick => @fire args...
   
   fire: (message) ->
     @package message

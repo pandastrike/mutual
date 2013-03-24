@@ -1,4 +1,4 @@
-{include,Attributes,Catalog,toError,throwError,merge,overload} = require "fairmont"
+{include,Attributes,Catalog,toError,throwError,merge,overload,w} = require "fairmont"
 Channel = require "./channel"
 PatternSet = require "./pattern-set"
 
@@ -15,22 +15,7 @@ class EventChannel extends Channel
     @_patterns = new PatternSet
     @receive (message) => 
       @_patterns.match message.event, (event) =>
-        @channels[event]?.fire message
-
-  fire: (args...) ->
-    
-    @fire = overload (signature) =>
-      signature.on ["string"], (event) =>
-        super event: event
-      signature.on ["string", "object"], (event,message) =>
-        message.event = event
-        super message
-      signature.on ["object"], (message) =>
-        super message
-      signature.fail =>
-        throwError "invalid-argument", "EventChannel::fire"
-    
-    @fire args...
+        @channels[event]?.fire message.content
 
   on: (event, handler) ->
     @_patterns.add event
@@ -43,6 +28,9 @@ class EventChannel extends Channel
       @remove event, _handler
     @on event, _handler
 
+  emit: (event,content) ->
+    @send event: event, content: content
+    
   forward: (channel,name) ->
     @receive (message) =>
       if name?
@@ -72,9 +60,9 @@ class EventChannel extends Channel
     # memoize the getter ...
     @callback = (error,results) =>
       unless error?
-        @send event: "success", content: results
+        @send "success", results
       else
-        @send event: "failure", content: error
+        @send "error", error
     
   emitter: (emitter) -> 
     self = @
@@ -87,14 +75,14 @@ class EventChannel extends Channel
         when 0 then null
         when 1 then args[0]
         else args
-      self.send event: event, content: args
+      self.send event, args
     emitter
 
   safely: (fn) ->
     try
       fn()
     catch error
-      @send event: "error", content: (toError error)
+      @send "error", error
 
 module.exports = EventChannel
   
