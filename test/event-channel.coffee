@@ -8,8 +8,8 @@ testify.test "An event channel", (context) ->
 
     channel = new EventChannel
 
-    channel.send event: "hello", content: "Dan"
+    channel.emit "hello", "Dan"
 
     channel.on "hello", (message) =>
       context.test "using an 'on' handler", ->
-        assert.ok message.content is "Dan"
+        assert.ok message is "Dan"
