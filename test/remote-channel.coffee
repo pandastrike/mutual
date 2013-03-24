@@ -31,9 +31,9 @@ testify.test "A remote channel", (context) ->
 
       receiver.on "hello", (message) ->
         context.test "using an 'on' handler", ->
-          assert.ok message.content is "Dan"
+          assert.ok message is "Dan"
           receiver.end()
           sender.end()
 
-      sender.send event: "hello", content: "Dan"
+      sender.emit "hello", "Dan"
     

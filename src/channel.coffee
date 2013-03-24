@@ -1,4 +1,5 @@
 {type,overload} = require "fairmont"
+setImmediate = process.nextTick unless setImmediate?
 
 
 class Channel
@@ -7,7 +8,7 @@ class Channel
     @handlers = []
   
   send: (args...) ->
-    process.nextTick => @fire args...
+    setImmediate => @fire args...
   
   fire: (message) ->
     @package message
