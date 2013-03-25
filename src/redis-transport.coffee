@@ -19,51 +19,52 @@ class RedisTransport
       log: (string,level) => poolEvents.fire event: level, content: string
   
   publish: (message) ->
-    @events.source "publish", (publish) =>
+    @events.source (events) =>
       {channel} = message
       @_acquire (client) =>
-        publish.once "*", => 
+        events.once "*", => 
           # You can't reuse pub/sub clients
           @clients.destroy client
-        client.publish channel, (JSON.stringify message), publish.callback
+        client.publish channel, (JSON.stringify message), events.callback
 
   subscribe: (name) ->
-    @events.source "subscribe", (subscribe) =>
+    @events.source (events) =>
       @_acquire (client) =>
         client.subscribe name, ->
-          subscribe.fire event: "success"
+          events.fire event: "success"
         client.on "message", (channel,json) =>
-          subscribe.safely =>
-            subscribe.fire event: "message", content: (JSON.parse json)
-        subscribe.on "unsubscribe", =>
+          events.safely =>
+            events.fire event: "message", content: (JSON.parse json)
+        events.on "unsubscribe", =>
           client.unsubscribe => 
             # You can't reuse pub/sub clients
             @clients.destroy client
   
   enqueue: (message) ->
-    @events.source "enqueue", (enqueue) =>
+    @events.source (events) =>
       {channel} = message
       @_acquire (client) =>
-        client.lpush channel, JSON.stringify(message), enqueue.callback
+        events.on "*", => @_release client
+        client.lpush channel, JSON.stringify(message), events.callback
     
     
   dequeue: (name) ->
-    @events.source "dequeue", (dequeue) =>
+    @events.source (events) =>
       @_acquire (client) =>
-        dequeue.source "transport", (brpop) =>
-          brpop.once "*", => @clients.release client
+        @events.source (_events) =>
+          _events.on "*", => @_release client
           name = if (type name) is "array" then name else [ name ]
-          client.brpop name..., 0, brpop.callback
-          brpop.on "success", (results) =>
-            dequeue.safely =>
+          client.brpop name..., 0, _events.callback
+          _events.on "success", (results) =>
+            events.safely =>
               [key,json] = results
               message = JSON.parse(json)
-              dequeue.send "success", message
+              events.emit "success", message
       
   _acquire: (handler) ->
-    @events.source "acquire", (acquire) =>
-      @clients.acquire acquire.callback
-      acquire.on "success", (message) => handler message.content
+    @events.source (events) =>
+      @clients.acquire events.callback
+      events.on "success", (client) => handler client
        
   _release: (client) -> @clients.release client
     

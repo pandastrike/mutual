@@ -1,4 +1,5 @@
 {toError,Catalog} = require "fairmont"
+setImmediate = process.nextTick unless setImmediate?
 
 Catalog.add "name-required", ->
   "Remote channels cannot be anonymous"
@@ -12,26 +13,26 @@ class RemoteQueue extends RemoteChannel
     @stopping = false
     
   send: (message) ->
-    @events.source "send", (send) =>
-      publish = @transport.enqueue (@package message)
-      publish.forward send
+    @events.source (events) =>
+      _events = @transport.enqueue (@package message)
+      _events.forward events
   
   listen: ->
-    @events.source "listen", (listen) =>
+    @events.source (events) =>
       unless @isListening
         @isListening = true
-        @end = =>
-          @stopping = true
-          @transport.end()
+        @end = =>  @stopping = true
         _dequeue = =>
           unless @stopping
-            dequeue = @transport.dequeue @name
-            dequeue.on "success", (message) ->
-              listen.send message
-              process.nextTick _dequeue
+            _events = @transport.dequeue @name
+            _events.on "success", (message) =>
+              @fire message
+              setImmediate _dequeue
+          else
+            @transport.end()
+            
         _dequeue()
-        listen.send "success"
-  
-
+        events.emit "success"
+          
 module.exports = RemoteQueue
   

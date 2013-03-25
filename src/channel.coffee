@@ -1,7 +1,6 @@
 {type,overload} = require "fairmont"
 setImmediate = process.nextTick unless setImmediate?
 
-
 class Channel
   
   constructor: ->

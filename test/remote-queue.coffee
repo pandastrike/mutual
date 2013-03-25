@@ -24,16 +24,16 @@ testify.test "A remote queue", (context) ->
 
     sender = make()
     receiver = make()
-
+    
     listen = receiver.listen()
-
+    
     listen.on "success", ->
-
-      receiver.on "hello", (message) ->
+    
+      receiver.on "hello", (name) ->
         context.test "using an 'on' handler", ->
-          assert.ok message.content is "Dan"
+          assert.ok (name is "Dan")
           receiver.end()
           sender.end()
-
-      sender.send event: "hello", content: "Dan"
+          
+      sender.emit "hello", "Dan"
     

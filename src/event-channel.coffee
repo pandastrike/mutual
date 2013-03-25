@@ -56,13 +56,14 @@ class EventChannel extends Channel
   remove: (event, handler) ->
     @channels[event]?.remove handler
 
-  @reader "callback", ->
-    # memoize the getter ...
-    @callback = (error,results) =>
-      unless error?
-        @send "success", results
-      else
-        @send "error", error
+  # The use of the => is intentional here:
+  # we want to use callback as a stand-alone
+  # property, not a method
+  callback: (error,results) =>
+    unless error?
+      @emit "success", results
+    else
+      @emit "error", error
     
   emitter: (emitter) -> 
     self = @
@@ -75,14 +76,14 @@ class EventChannel extends Channel
         when 0 then null
         when 1 then args[0]
         else args
-      self.send event, args
+      self.emit event, args
     emitter
 
   safely: (fn) ->
     try
       fn()
     catch error
-      @send "error", error
+      @emit "error", error
 
 module.exports = EventChannel
   

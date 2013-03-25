@@ -20,24 +20,24 @@ class RemoteChannel extends EventChannel
     message
     
   # Override ::send to mean 'send this message across the network'
+  # ::fire now means to send locally only in addition to synchronously
   send: (message) ->
-    @events.source "send", (send) =>
-      publish = @transport.publish (@package message)
-      publish.forward send
+    @events.source (events) =>
+      _events = @transport.publish (@package message)
+      _events.forward events
   
   # Listen for messages on the network
   listen: ->
-    @events.source "listen", (listen) =>
+    @events.source (events) =>
       unless @isListening
         @isListening = true
-        subscribe = @transport.subscribe @name
+        _events = @transport.subscribe @name
         # TODO: Not sure I love this -- feels like we're overloading
         # the `subscribe` channel ... maybe a different message, ex: "ready"?
-        subscribe.on "success", -> listen.fire "success"
-        subscribe.on "message", (message) =>
-          @fire message.content
+        _events.on "success", -> events.fire event: "success"
+        _events.on "message", (message) => @fire message
         @end = =>
-          subscribe.fire event: "unsubscribe"
+          _events.fire event: "unsubscribe"
           @transport.end()
   
   end: ->
