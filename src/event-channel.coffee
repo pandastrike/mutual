@@ -1,4 +1,4 @@
-{include,Attributes,Catalog,toError,throwError,merge,overload,w} = require "fairmont"
+{include, Attributes, Catalog, toError, throwError, merge, overload, w} = require "fairmont"
 Channel = require "./channel"
 PatternSet = require "./pattern-set"
 
@@ -7,11 +7,13 @@ Catalog.add
   
 class EventChannel extends Channel
   
+  # @property [Object] channels
+  channels: {}
+
   include @, Attributes
   
   constructor: ->
     super
-    @channels = {}
     @_patterns = new PatternSet
     @receive (message) => 
       @_patterns.match message.event, (event) =>
@@ -28,10 +30,10 @@ class EventChannel extends Channel
       @remove event, _handler
     @on event, _handler
 
-  emit: (event,content) ->
+  emit: (event, content) ->
     @send event: event, content: content
     
-  forward: (channel,name) ->
+  forward: (channel, name) ->
     @receive (message) =>
       if name?
         message = merge message, event: "#{name}.#{message.event}"
@@ -59,7 +61,7 @@ class EventChannel extends Channel
   # The use of the => is intentional here:
   # we want to use callback as a stand-alone
   # property, not a method
-  callback: (error,results) =>
+  callback: (error, results) =>
     unless error?
       @emit "success", results
     else
