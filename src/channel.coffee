@@ -20,7 +20,7 @@ class Channel
     @handlers.push handler
     
   remove: (handler) ->
-    @handlers = (for _handler in @handlers when _handler isnt handlers)
+    @handlers = (_handler for _handler in @handlers when _handler isnt handlers)
     
   forward: (channel) ->
     @receive (message) =>
