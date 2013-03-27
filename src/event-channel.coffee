@@ -6,14 +6,12 @@ Catalog.add
   "invalid-argument": (fname) -> "#{fname}: Invalid argument"
   
 class EventChannel extends Channel
-  
-  # @property [Object] channels
-  channels: {}
 
   include @, Attributes
   
   constructor: ->
     super
+    @channels = {}
     @_patterns = new PatternSet
     @receive (message) => 
       @_patterns.match message.event, (event) =>

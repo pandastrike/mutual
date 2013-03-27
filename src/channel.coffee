@@ -3,10 +3,8 @@ setImmediate = process.nextTick unless setImmediate?
 
 class Channel
   
-  # @property [Array] handlers
-  handlers: []
-
   constructor: ->
+    @handlers = []
   
   send: (args...) ->
     setImmediate => @fire args...
@@ -20,7 +18,7 @@ class Channel
     @handlers.push handler
     
   remove: (handler) ->
-    @handlers = (_handler for _handler in @handlers when _handler isnt handlers)
+    @handlers = (_handler for _handler in @handlers when _handler isnt handler)
     
   forward: (channel) ->
     @receive (message) =>

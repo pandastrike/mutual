@@ -7,7 +7,7 @@ _parse = (string) ->
   try
     string.split "."
   catch error
-    throw (toError "invalid-pattern")(string)
+    throw (toError "invalid-pattern") #(string))
 
 _match = (pattern, target) ->
   pl = pattern.length
@@ -18,7 +18,7 @@ _match = (pattern, target) ->
     [p, px...] = pattern
     [t, tx...] = target
     if p is "*"
-      if _match px, then true
+      if _match px, tx then true
       else _match pattern, tx
     else if p is t then _match px, tx
     else false
