@@ -7,7 +7,7 @@ _parse = (string) ->
   try
     string.split "."
   catch error
-    throw (toError "invalid-pattern") #(string))
+    throw (toError "invalid-pattern")(string)
 
 _match = (pattern, target) ->
   pl = pattern.length
