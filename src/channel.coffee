@@ -18,11 +18,7 @@ class Channel
     @handlers.push handler
     
   remove: (handler) ->
-    keepers = []
-    for _handler in @handlers
-      unless _handler is handler
-        keepers.push _handler
-    @handlers = keepers
+    @handlers = (_handler for _handler in @handlers when _handler isnt handler)
     
   forward: (channel) ->
     @receive (message) =>
@@ -31,7 +27,7 @@ class Channel
   source: (block) ->
     channel = new @constructor
     channel.forward @
-    (block channel) if block?
+    block channel if block?
     channel    
     
   package: (message) ->

@@ -6,13 +6,15 @@ Catalog.add "name-required", ->
 EventChannel = require "./event-channel"
 
 class RemoteChannel extends EventChannel
+
+  # @property [Boolean] isListening Is listening?
+  isListening: false
   
   constructor: (options) ->
     super
-    {@name,@transport} = options
+    {@name, @transport} = options
     throw (toError "name-required") unless @name?
     @events = new EventChannel
-    @isListening = false
     
   package: (message) ->
     message = super

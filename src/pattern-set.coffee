@@ -14,7 +14,7 @@ class PatternSet
   # Callback is optional - returns an array of matches,
   # invoking the callback for each one if provided. Allows
   # for one-pass processing.
-  match: (target,callback) ->
+  match: (target, callback) ->
     results = []
     for specification, pattern of @_patterns
       if pattern.match target
