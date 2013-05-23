@@ -57,7 +57,7 @@ class RedisTransport
           client.brpop name..., 0, _events.callback
           _events.on "success", (results) =>
             events.safely =>
-              [key,json] = results
+              [key, json] = results
               message = JSON.parse(json)
               events.emit "success", message
       

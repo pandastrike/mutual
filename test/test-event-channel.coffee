@@ -1,6 +1,6 @@
 EventChannel = require "../src/event-channel"
 helpers = require "./helpers"
-{testify,assert} = helpers
+{testify, assert} = helpers
 
 testify.test "An event channel", (context) ->
 

@@ -1,7 +1,7 @@
 Transport = require "../src/redis-transport"
 RemoteChannel = require "../src/remote-channel"
 helpers = require "./helpers"
-{testify,assert,events} = helpers
+{testify, assert, events} = helpers
 
 make = ->
   

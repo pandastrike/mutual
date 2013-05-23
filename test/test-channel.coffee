@@ -1,6 +1,6 @@
 Channel = require "../src/channel"
 helpers = require "./helpers"
-{testify,assert} = helpers
+{testify, assert} = helpers
 
 channel = new Channel
 

@@ -4,10 +4,9 @@ RemoteChannel = require "./remote-channel"
 
 class RemoteQueue extends RemoteChannel
   
-  constructor: (options) ->
-    super
-    @stopping = false
-    
+  # @property [Boolean] stopping
+  stopping: false
+      
   send: (message) ->
     @events.source (events) =>
       _events = @transport.enqueue (@package message)
@@ -17,7 +16,7 @@ class RemoteQueue extends RemoteChannel
     @events.source (events) =>
       unless @isListening
         @isListening = true
-        @end = =>  @stopping = true
+        @end = => @stopping = true
         _dequeue = =>
           unless @stopping
             _events = @transport.dequeue @name

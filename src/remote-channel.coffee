@@ -1,6 +1,9 @@
 EventChannel = require "./event-channel"
 
 class RemoteChannel extends EventChannel
+
+  # @property [Boolean] isListening Is listening?
+  isListening: false
   
   constructor: (options) ->
     super
@@ -8,7 +11,6 @@ class RemoteChannel extends EventChannel
     unless @name?
       throw new Error "Remote channels cannot be anonymous"
     @events = new EventChannel
-    @isListening = false
     
   package: (message) ->
     message = super
