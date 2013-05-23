@@ -1,13 +1,10 @@
-{memoize,toError,Catalog} = require "fairmont"
-
-Catalog.add "invalid-pattern", (pattern) ->
-  "#{pattern} is not a valid pattern"
+{memoize} = require "fairmont"
 
 _parse = (string) ->
   try
     string.split "."
   catch error
-    throw ((toError "invalid-pattern")(string))
+    throw new Error "#{string} is not a valid pattern"
 
 _match = (pattern,target) ->
   pl = pattern.length

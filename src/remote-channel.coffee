@@ -1,8 +1,3 @@
-{toError,Catalog} = require "fairmont"
-
-Catalog.add "name-required", ->
-  "Remote channels cannot be anonymous"
-
 EventChannel = require "./event-channel"
 
 class RemoteChannel extends EventChannel
@@ -10,7 +5,8 @@ class RemoteChannel extends EventChannel
   constructor: (options) ->
     super
     {@name,@transport} = options
-    throw (toError "name-required") unless @name?
+    unless @name?
+      throw new Error "Remote channels cannot be anonymous"
     @events = new EventChannel
     @isListening = false
     

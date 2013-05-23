@@ -1,8 +1,4 @@
-{toError,Catalog} = require "fairmont"
 setImmediate = process.nextTick unless setImmediate?
-
-Catalog.add "name-required", ->
-  "Remote channels cannot be anonymous"
 
 RemoteChannel = require "./remote-channel"
 

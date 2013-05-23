@@ -1,5 +1,9 @@
-module.exports =
-  Channel: require "./channel"
-  EventChannel: require "./event-channel"
-  RemoteChannel: require "./remote-channel"
-  RemoteQueue: require "./remote-queue"
+getter = (fn) -> 
+  get: -> fn()
+  enumerable: true
+  
+Object.defineProperties module.exports,
+  Channel: getter -> require "./channel"
+  EventChannel: getter -> require "./event-channel"
+  RemoteChannel: getter -> require "./remote-channel"
+  RemoteQueue: getter -> require "./remote-queue"
