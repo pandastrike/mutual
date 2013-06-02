@@ -1,43 +1,7 @@
 {include,Attributes,merge,type,w} = require "fairmont"
 Channel = require "./channel"
 PatternSet = require "./pattern-set"
-
-# TODO: This is temporarily here until I can properly extract it
-
-class Signature 
-  
-  constructor: -> 
-    @signatures = {}
-    @failHandler = => false
-  
-  on: (types,processor) ->
-    @signatures[types.join "."] = processor
-    @
-  
-  fail: (handler) =>
-    @failHandler = handler
-    @
-
-  match: (args) -> 
-    types = (type arg for arg in args)
-    signature = types.join "."
-    processor = @signatures[signature]
-    if processor?
-      processor
-    else
-      console.log signature
-      console.log @signatures
-      @failHandler
-    
-overload = (declarations) ->
-  signature = (declarations new Signature)
-  (args...) ->
-    ((signature.match args) args...)
-
-# $.Overloading = 
-#   overload: (name,declarations) ->
-#     @::[name] = $.overload declarations
-#     @
+{overload} = require "typely"
 
 class EventChannel extends Channel
 
@@ -51,19 +15,34 @@ class EventChannel extends Channel
       @_patterns.match message.event, (event) =>
         @channels[event]?.fire message.content
 
-  on: (event, handler) ->
-    @_patterns.add event
-    @channels[event] ?= new Channel
-    @channels[event].receive handler
+  on: overload (match,fail) ->
 
-  once: (event, handler) ->
-    _handler = (args...)=>
-      handler(args...)
-      @remove event, _handler
-    @on event, _handler
+    match "string", "function", (name,handler) ->
+      @_patterns.add name
+      @channels[name] ?= new Channel
+      @channels[name].receive handler
 
-  emit: (event, content) ->
-    @send event: event, content: content
+    match "object", (handlers) ->
+      @on( name, handler ) for name, handler of handlers
+    
+    fail -> throw new TypeError "Invalid event handler specified"
+    
+  once: overload (match,fail) -> 
+  
+    match "string", "function", (name,handler) ->
+      _handler = (args...) =>
+        handler(args...)
+        @remove name, _handler
+      @on name, _handler
+
+    match "object", (handlers) ->
+      @once( name, handler ) for name, handler of handlers
+
+    fail -> throw new TypeError "Invalid event handler specified"
+
+
+  emit: (name, content) ->
+    @send event: name, content: content
     
   forward: (channel, name) ->
     @receive (message) =>
@@ -71,25 +50,26 @@ class EventChannel extends Channel
         message = merge message, event: "#{name}.#{message.event}"
       channel.fire message
       
-  source: (args...) ->
+  source: ->
     
-    # TODO: is there a cleaner way to do this without memoizing like this?
-    _source = (name,block) =>
+    # We redefine ::source on the fly like this so we can use
+    # super with overload. See https://github.com/dyoder/typely/issues/1
+    
+    _source = (name,block) ->
       channel = new @constructor
       channel.forward @, name
       block channel if block?
       channel
     
-    @source = overload (signature) =>
-      signature.on [], => super
-      signature.on ["function"], (block) => super
-      signature.on ["string"], _source
-      signature.on ["string","function"], _source
-      signature.fail ->
-        throw new TypeError "EventChannel::source, invalid argument(s)"
+    @source = overload (match,fail) ->
+      match -> super
+      match "function", (fn) -> super
+      match "string", _source
+      match "string","function", _source
+      fail -> throw new TypeError "Invalid event source specified"
+      
+    @source( arguments... )
     
-    @source args...
-
   remove: (event, handler) ->
     @channels[event]?.remove handler
 

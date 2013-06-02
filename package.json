@@ -24,11 +24,12 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
-    "generic-pool": "~2.0.2",
-    "fairmont": "~0.3.x",
-    "redis": "~0.8.2"
+    "fairmont": "0.3.x",
+    "generic-pool": "2.0.2",
+    "redis": "0.8.x",
+    "typely": "0.0.x"
   },
-  "dependencies": {
-    "testify": "~0.1.0"
-  }  
+  "devDependencies": {
+    "testify": "0.1.x"
+  }
 }

@@ -10,6 +10,6 @@ testify.test "An event channel", (context) ->
 
     channel.emit "hello", "Dan"
 
-    channel.on "hello", (message) =>
+    channel.on hello: (message) =>
       context.test "using an 'on' handler", ->
         assert.ok message is "Dan"
