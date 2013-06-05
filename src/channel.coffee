@@ -5,8 +5,8 @@ class Channel
   constructor: ->
     @handlers = []
   
-  send: (args...) ->
-    setImmediate => @fire args...
+  send: (message) ->
+    setImmediate => @fire( message )
   
   fire: (message) ->
     @package message
