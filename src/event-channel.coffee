@@ -134,18 +134,19 @@ class EventChannel extends Channel
     events = @source()
     (arg) ->
       _fn = (arg) ->
-        results = {}; errors = 0
+        results = {}; errors = []
         called = 0; returned = 0
         finish = ->
           returned++
           if called == returned
-            if errors is 0
+            if errors.length == 0
               events.emit "success", results
             else
-              events.emit "error", 
-                new Error "concurrently: unable to complete"
+              _error = new Error "concurrently: unable to complete"
+              _error.errors = errors
+              events.emit "error", _error
         error = (_error) ->
-          errors++
+          errors.push _error
           finish()
         return arg if functions.length is 0
         for [name,fn] in functions
