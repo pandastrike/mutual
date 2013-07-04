@@ -113,7 +113,7 @@ class EventChannel extends Channel
         if fn?
           try
             rval = fn(arg)
-            if rval?.on?
+            if rval instanceof EventChannel
               rval.on "success", _fn
               rval.on "error", (error) ->
                 events.emit "error", error
@@ -147,6 +147,8 @@ class EventChannel extends Channel
               events.emit "error", _error
         error = (_error) ->
           errors.push _error
+          # TODO: If we're going to finish() here, why bother with an array
+          # of errors ... ?
           finish()
         return arg if functions.length is 0
         for [name,fn] in functions
