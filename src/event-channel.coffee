@@ -159,8 +159,8 @@ class EventChannel extends Channel
             try
               called++
               rval = fn( arg )
-              if rval?.on?
-                rval.on "success", success 
+              if rval instanceof EventChannel
+                rval.on "success", success
                 rval.on "error", error
               else
                 success rval
