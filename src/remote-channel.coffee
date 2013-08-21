@@ -2,7 +2,8 @@ EventChannel = require "./event-channel"
 
 class RemoteChannel extends EventChannel
 
-  # @property [Boolean] isListening Is listening?
+  # are we listening for messages yet? used to keep from subscribing more
+  # than once
   isListening: false
   
   constructor: (options) ->
@@ -38,8 +39,7 @@ class RemoteChannel extends EventChannel
           _events.fire event: "unsubscribe"
           @transport.end()
   
-  end: ->
-    @transport.end()
+  end: -> @transport.end()
 
 module.exports = RemoteChannel
   

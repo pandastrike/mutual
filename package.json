@@ -1,6 +1,6 @@
 {
   "name": "mutual",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "Scala-inspired Actors that use Redis as a message transport",
   "main": "src/index.coffee",
   "scripts": {
@@ -30,6 +30,7 @@
     "typely": "0.0.x"
   },
   "devDependencies": {
-    "testify": "0.1.x"
+    "testify": "0.1.x",
+    "express": "~3.3.5"
   }
 }

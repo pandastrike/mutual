@@ -76,9 +76,9 @@ class EventChannel extends Channel
   # The use of the => is intentional here:
   # we want to use callback as a stand-alone
   # property, not a method
-  callback: (error, results) =>
+  callback: (error, results...) =>
     unless error?
-      @emit "success", results
+      @emit "success", results...
     else
       @emit "error", error
     
