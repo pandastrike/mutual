@@ -1,6 +1,6 @@
 {
   "name": "mutual",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Scala-inspired Actors that use Redis as a message transport",
   "main": "src/index.coffee",
   "scripts": {
@@ -24,7 +24,7 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
-    "fairmont": "0.4.x",
+    "fairmont": "0.7.x",
     "generic-pool": "2.0.2",
     "redis": "0.8.x",
     "typely": "0.0.x"

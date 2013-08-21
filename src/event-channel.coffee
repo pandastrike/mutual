@@ -169,6 +169,13 @@ class EventChannel extends Channel
       _fn( arg )
       events
 
+  wrap: ->
+    rval = for fn in arguments
+      =>
+        args = arguments 
+        @source (event) -> fn(args..., event.callback)
+    if rval.length < 2 then rval[0] else rval
+  
   sleep: (ms) ->
     @source (events) ->
       setTimeout (-> events.emit "success"), ms
