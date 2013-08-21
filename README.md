@@ -18,7 +18,7 @@ Mutual is inspired by Scala's Actor model. Concurrency is managed by setting up 
       go -> read("foo.txt", encoding: "utf8")
       go (text) -> console.log text
       
-Remote channels are just event channels, which means you can swap them out without changing any code. Here's a simple express app that implements a simple chat interface:
+Remote channels are just event channels, which means you can swap them out without changing any code. Here's a simple express app that implements a chat interface:
 
     http = require "http"
     {EventChannel} = require "mutual"
@@ -54,9 +54,18 @@ Remote channels are just event channels, which means you can swap them out witho
 
     http.createServer(app).listen(1337)
     
-This isn't much different from what we could do using `EventEmitter`, outside of utilizing the event bubbling for `error` events. However, this version also has a big limitation: it only works for one process. If we start to get lots of messages, we'll want to be able to run multiple processes, perhaps even across multiple machines.
+If you run this, you can do a GET to a channel URL (ex: `/foo`) and then POST a message to it.
 
-With Mutual, this requires only a simple change. First, let's `require` the `RedisTransport` and `RemoteChannel`:
+        curl http://localhost:1337/foo &
+        curl http://localhost:1337/foo -d "Hello"
+
+The original GET will return the message.
+
+Of course, this isn't much different from what we could do using `EventEmitter`, outside of utilizing the event bubbling for `error` events. However, this version also has a big limitation: it only works for one process. If we start to get lots of messages, we'll want to be able to run multiple processes, perhaps even across multiple machines.
+
+With Mutual, all we need to do, basically, is change `makeChannel` so that it returns a `RemoteChannel`. 
+
+First, let's `require` the `RedisTransport` and `RemoteChannel`:
 
     {RemoteChannel,EventChannel,RedisTransport} = require "../src/index"
 
