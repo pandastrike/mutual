@@ -5,14 +5,14 @@ events = new EventChannel
 # all error events will bubble-up here
 events.on "error", (error) -> console.log error
 
-{getChannel,makeChannel} = do (channels = {}) ->
+{getChannel, makeChannel} = do (channels = {}) ->
   makeChannel: (name) -> events.source name
   getChannel: (name) -> channels[name] ?= makeChannel(name)
 
 express = require "express"
 app = express()
 
-app.use (request, response, next) -> 
+app.use (request, response, next) ->
   body = ""
   request.on "data", (data) -> body += data
   request.on "end", ->

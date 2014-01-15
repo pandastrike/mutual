@@ -3,14 +3,14 @@ redis = require "redis"
 {type,toError} = require "fairmont"
 EventChannel = require "./event-channel"
 
-class RedisTransport 
+class RedisTransport
   
   constructor: (options) ->
     @events = new EventChannel
     poolEvents = @events.source "pool"
-    @clients = Pool 
+    @clients = Pool
       name: "redis-transport", max: 10
-      create: (callback) => 
+      create: (callback) =>
         {port, host} = options
         client = redis.createClient port, host, options.redis
         client.on "error", (error) -> callback error
@@ -22,7 +22,7 @@ class RedisTransport
     @events.source (events) =>
       {channel} = message
       @_acquire (client) =>
-        events.once "*", => 
+        events.once "*", =>
           # You can't reuse pub/sub clients
           @clients.destroy client
         client.publish channel, (JSON.stringify message), events.callback
@@ -36,7 +36,7 @@ class RedisTransport
           events.safely =>
             events.fire event: "message", content: (JSON.parse json)
         events.on "unsubscribe", =>
-          client.unsubscribe => 
+          client.unsubscribe =>
             # You can't reuse pub/sub clients
             @clients.destroy client
   

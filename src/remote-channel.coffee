@@ -8,7 +8,7 @@ class RemoteChannel extends EventChannel
   
   constructor: (options) ->
     super
-    {@name,@transport} = options
+    {@name, @transport} = options
     unless @name?
       throw new Error "Remote channels cannot be anonymous"
     @events = new EventChannel

@@ -27,7 +27,7 @@ class Channel
     channel = new @constructor
     channel.forward @
     block channel if block?
-    channel    
+    channel
     
   package: (message) ->
     message

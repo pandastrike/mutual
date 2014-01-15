@@ -1,4 +1,4 @@
-{include,Attributes,merge,type,w} = require "fairmont"
+{include, Attributes, merge, type, w} = require "fairmont"
 Channel = require "./channel"
 PatternSet = require "./pattern-set"
 {overload} = require "typely"
@@ -11,13 +11,13 @@ class EventChannel extends Channel
     super
     @channels = {}
     @_patterns = new PatternSet
-    @receive (message) => 
+    @receive (message) =>
       @_patterns.match message.event, (event) =>
         @channels[event]?.fire message.content
 
-  on: overload (match,fail) ->
+  on: overload (match, fail) ->
 
-    match "string", "function", (name,handler) ->
+    match "string", "function", (name, handler) ->
       @_patterns.add name
       @channels[name] ?= new Channel
       @channels[name].receive handler
@@ -27,9 +27,9 @@ class EventChannel extends Channel
     
     fail -> throw new TypeError "Invalid event handler specified"
     
-  once: overload (match,fail) -> 
+  once: overload (match, fail) ->
   
-    match "string", "function", (name,handler) ->
+    match "string", "function", (name, handler) ->
       _handler = (args...) =>
         handler(args...)
         @remove name, _handler
@@ -55,17 +55,17 @@ class EventChannel extends Channel
     # We redefine ::source on the fly like this so we can use
     # super with overload. See https://github.com/dyoder/typely/issues/1
     
-    _source = (name,block) ->
+    _source = (name, block) ->
       channel = new @constructor
       channel.forward @, name
       block channel if block?
       channel
     
-    @source = overload (match,fail) ->
+    @source = overload (match, fail) ->
       match -> super
       match "function", (fn) -> super
       match "string", _source
-      match "string","function", _source
+      match "string", "function", _source
       fail -> throw new TypeError "Invalid event source specified"
       
     @source( arguments... )
@@ -82,7 +82,7 @@ class EventChannel extends Channel
     else
       @emit "error", error
     
-  emitter: (emitter) -> 
+  emitter: (emitter) ->
     self = @
     emit = emitter.emit
     emitter.emit = (event, args...) ->
@@ -128,8 +128,8 @@ class EventChannel extends Channel
 
   concurrently: (builder) ->
     functions = []
-    go = (name,fn) ->
-      functions.push (if fn? then [name,fn] else [null,name])
+    go = (name, fn) ->
+      functions.push (if fn? then [name, fn] else [null, name])
     builder go
     events = @source()
     (arg) ->
@@ -151,8 +151,8 @@ class EventChannel extends Channel
           # of errors ... ?
           finish()
         return arg if functions.length is 0
-        for [name,fn] in functions
-          do (name,fn) ->
+        for [name, fn] in functions
+          do (name, fn) ->
             success = (result) ->
               results[name] = result if name?
               finish()
@@ -172,7 +172,7 @@ class EventChannel extends Channel
   wrap: ->
     rval = for fn in arguments
       =>
-        args = arguments 
+        args = arguments
         @source (event) -> fn(args..., event.callback)
     if rval.length < 2 then rval[0] else rval
   
