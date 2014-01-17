@@ -21,9 +21,11 @@ class EventChannel extends Channel
       @_patterns.add name
       @channels[name] ?= new Channel
       @channels[name].receive handler
+      @
 
     match "object", (handlers) ->
       @on( name, handler ) for name, handler of handlers
+      @
     
     fail -> throw new TypeError "Invalid event handler specified"
     
@@ -34,9 +36,11 @@ class EventChannel extends Channel
         handler(args...)
         @remove name, _handler
       @on name, _handler
+      @
 
     match "object", (handlers) ->
       @once( name, handler ) for name, handler of handlers
+      @
 
     fail -> throw new TypeError "Invalid event handler specified"
 
