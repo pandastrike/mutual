@@ -108,13 +108,18 @@ class EventChannel extends Channel
       
   serially: (builder) ->
     functions = []
-    go = (fn) -> (functions.push fn)
+    go = (fn) ->
+      functions.push fn
     builder go
     events = @source()
     (arg) ->
+      results = []
+      count = 0
       _fn = (arg) ->
+        results.push arg if arg?
         fn = functions.shift()
         if fn?
+          count++
           try
             rval = fn(arg)
             if rval instanceof EventChannel
@@ -126,7 +131,7 @@ class EventChannel extends Channel
           catch error
             events.emit "error", error
         else
-          events.emit "success", arg
+          events.emit "success", results
       _fn( arg )
       return events
 
@@ -138,7 +143,7 @@ class EventChannel extends Channel
     events = @source()
     (arg) ->
       _fn = (arg) ->
-        results = {}; errors = []
+        results = {}; errors = {}
         called = 0; returned = 0
         finish = ->
           returned++
@@ -149,10 +154,12 @@ class EventChannel extends Channel
               _error = new Error "concurrently: unable to complete"
               _error.errors = errors
               events.emit "error", _error
-        error = (_error) ->
-          errors.push _error
-          # TODO: If we're going to finish() here, why bother with an array
-          # of errors ... ?
+        record_error = (name, _error) ->
+          if name
+            errors[name] = _error
+          else
+            errors.unnamed_actions ||= []
+            errors.unnamed_actions.push _error
           finish()
         return arg if functions.length is 0
         for [name, fn] in functions
@@ -165,11 +172,12 @@ class EventChannel extends Channel
               rval = fn( arg )
               if rval instanceof EventChannel
                 rval.on "success", success
-                rval.on "error", error
+                rval.on "error", (error) ->
+                  record_error name, error
               else
                 success rval
             catch _error
-              error _error
+              record_error name, _error
       _fn( arg )
       events
 
