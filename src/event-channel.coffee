@@ -148,7 +148,7 @@ class EventChannel extends Channel
         finish = ->
           returned++
           if called == returned
-            if errors.length == 0
+            if Object.keys(errors).length == 0
               events.emit "success", results
             else
               _error = new Error "concurrently: unable to complete"
