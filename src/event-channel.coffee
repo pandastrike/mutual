@@ -181,12 +181,31 @@ class EventChannel extends Channel
       _fn( arg )
       events
 
-  wrap: ->
-    rval = for fn in arguments
-      =>
-        args = arguments
-        @source (event) -> fn(args..., event.callback)
+  wrap: (fns...) ->
+    rval = for fn in fns
+      # produce a function that returns an EventChannel
+      (args...) =>
+        @source (events) =>
+          # use the type detection in ::serially to asynchronously
+          # evaluate any arguments that are themselves EventChannels.
+          series = do @serially (step) =>
+            for arg, i in args
+              do (arg) =>
+                # If the argument is not an EventChannel, it is simply
+                # added to the series results array.
+                # If the argument is an EventChannel, ::serially will
+                # wait for the result and add it to the results array.
+                step => arg
+          series.on "error", (error) =>
+            events.emit "error", error
+          series.on "success", (results) =>
+            # The items in the results array are now the arguments passed
+            # to the wrapper function, except the EventChannel results
+            # have been asynchronously evaluated.
+            fn(results..., events.callback)
+
     if rval.length < 2 then rval[0] else rval
+
   
   sleep: (ms) ->
     @source (events) ->

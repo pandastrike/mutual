@@ -21,8 +21,8 @@ testify.test "An event channel", (context) ->
       else
         callback new Error "Ha! Wrong."
 
-    channel = new EventChannel
-    wrapped = channel.wrap node_style
+    base_channel = new EventChannel
+    wrapped = base_channel.wrap node_style
 
     context.test "returns a function", ->
       assert.equal typeof(wrapped), "function"
@@ -43,6 +43,19 @@ testify.test "An event channel", (context) ->
       channel.on "error", (error) ->
         context.test "and provides the error to the handler", ->
           assert.equal error.message, "Ha! Wrong."
+
+    context.test "when an argument is itself an EventChannel", (context) ->
+      other_function = (callback) ->
+        callback null, true
+
+      other_wrapped = base_channel.wrap(other_function)
+
+      channel = wrapped(other_wrapped())
+
+      channel.on "success", (result) ->
+        context.test "it is asynchronously evaluated", ->
+          assert.equal result, "a result"
+
 
 
   context.test ".concurrently", (context) ->
