@@ -2,6 +2,7 @@
 Channel = require "./channel"
 PatternSet = require "./pattern-set"
 {overload} = require "typely"
+{EventEmitter} = require "events"
 
 class EventChannel extends Channel
 
@@ -122,7 +123,7 @@ class EventChannel extends Channel
           count++
           try
             rval = fn(arg)
-            if rval instanceof EventChannel
+            if (rval instanceof EventChannel) || (rval instanceof EventEmitter)
               rval.on "success", _fn
               rval.on "error", (error) ->
                 events.emit "error", error
@@ -170,7 +171,7 @@ class EventChannel extends Channel
             try
               called++
               rval = fn( arg )
-              if rval instanceof EventChannel
+              if (rval instanceof EventChannel) || (rval instanceof EventEmitter)
                 rval.on "success", success
                 rval.on "error", (error) ->
                   record_error name, error
