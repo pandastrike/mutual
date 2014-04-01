@@ -106,7 +106,13 @@ class EventChannel extends Channel
     catch error
       @emit "error", error
       
-  serially: (builder) ->
+  serially: (args...) ->
+    if args.length == 2
+      [{accumulate}, builder] = args
+    else
+      [builder] = args
+      accumulate = false
+
     functions = []
     go = (fn) ->
       functions.push fn
@@ -131,7 +137,11 @@ class EventChannel extends Channel
           catch error
             events.emit "error", error
         else
-          events.emit "success", results
+          if accumulate == true
+            events.emit "success", results
+          else
+            [..., result] = results
+            events.emit "success", result
       _fn( arg )
       return events
 
@@ -188,7 +198,7 @@ class EventChannel extends Channel
         @source (events) =>
           # use the type detection in ::serially to asynchronously
           # evaluate any arguments that are themselves EventChannels.
-          series = do @serially (step) =>
+          series = do @serially {accumulate: true}, (step) =>
             for arg, i in args
               do (arg) =>
                 # If the argument is not an EventChannel, it is simply
