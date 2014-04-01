@@ -117,7 +117,7 @@ class EventChannel extends Channel
       results = []
       count = 0
       _fn = (arg) ->
-        results.push arg if arg?
+        results.push arg unless arg == undefined
         fn = functions.shift()
         if fn?
           count++
@@ -203,7 +203,10 @@ class EventChannel extends Channel
             # The items in the results array are now the arguments passed
             # to the wrapper function, except the EventChannel results
             # have been asynchronously evaluated.
-            fn(results..., events.callback)
+            try
+              fn(results..., events.callback)
+            catch error
+              events.emit "error", error
 
     if rval.length < 2 then rval[0] else rval
 
