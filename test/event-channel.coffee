@@ -57,7 +57,6 @@ testify.test "An event channel", (context) ->
           assert.equal result, "a result"
 
 
-
   context.test ".concurrently", (context) ->
     source = new EventChannel
     
@@ -89,8 +88,59 @@ testify.test "An event channel", (context) ->
             assert.ok error.errors.bar instanceof Error
 
 
+  context.test ".serially", (context) ->
+    source = new EventChannel
+    
+    context.test "defines functions which return EventChannels", (context) ->
 
+      context.test "emits 'success' when all succeed", (context) ->
+        channel = do source.serially (action) ->
+          action -> "I am foo"
+          action -> "I am bar"
 
+        channel.on "error", (error) ->
+          context.fail(error)
+
+        channel.on "success", (result) ->
+          context.test "with the result of the last action", ->
+            assert.equal result, "I am bar"
+
+      context.test "emits 'error' when any fail", (context) ->
+        channel = do source.serially (action) ->
+          action -> throw new Error "error foo"
+          action -> throw new Error "error bar"
+
+        channel.on "success", (results) ->
+          context.fail("Should not succeed")
+
+        channel.on "error", (error) ->
+          context.test "with the error from the last action", ->
+            assert.ok error instanceof Error
+
+      context.test "returns result of the last action when {accumulate: false}", (context) ->
+        channel = do source.serially {accumulate: false}, (action) ->
+          action -> "I am foo"
+          action -> "I am bar"
+
+        channel.on "error", (error) ->
+          context.fail(error)
+
+        channel.on "success", (result) ->
+          context.test "with the result of the last action", ->
+            assert.equal result, "I am bar"
+
+      context.test "returns results of all actions when {accumulate: true}", (context) ->
+        channel = do source.serially {accumulate: true}, (action) ->
+          action -> "I am foo"
+          action -> "I am bar"
+
+        channel.on "error", (error) ->
+          context.fail(error)
+
+        channel.on "success", (results) ->
+          context.test "with the results of all actions", ->
+            assert.equal results[0], "I am foo"
+            assert.equal results[1], "I am bar"
 
   context.test "can wrap Node-style callback functions", (context) ->
     
