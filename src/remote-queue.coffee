@@ -1,5 +1,3 @@
-setImmediate = process.nextTick unless setImmediate?
-
 RemoteChannel = require "./remote-channel"
 
 class RemoteQueue extends RemoteChannel

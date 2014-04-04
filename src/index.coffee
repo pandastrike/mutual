@@ -8,3 +8,4 @@ Object.defineProperties module.exports,
   RemoteChannel: getter -> require "./remote-channel"
   RedisTransport: getter -> require "./redis-transport"
   RemoteQueue: getter -> require "./remote-queue"
+  DurableChannel: getter -> require "./durable-channel"

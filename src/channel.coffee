@@ -1,5 +1,3 @@
-setImmediate = process.nextTick unless setImmediate?
-
 class Channel
   
   constructor: ->

@@ -1,8 +1,8 @@
 {
   "name": "mutual",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "description": "Scala-inspired Actors that use Redis as a message transport",
-  "main": "src/index.coffee",
+  "main": "lib/index.js",
   "scripts": {
     "test": "rake test"
   },
@@ -23,9 +23,14 @@
   "author": "Dan Yoder",
   "license": "MIT",
   "readmeFilename": "README.md",
+  "scripts": {
+    "prepublish": "coffee -o lib/ -c src/*.coffee"
+  },
   "dependencies": {
     "fairmont": "0.7.x",
     "generic-pool": "2.0.2",
+    "key-forge": "~0.1.3",
+    "pirate": "~0.9.7",
     "redis": "0.8.x",
     "typely": "0.0.x"
   },
