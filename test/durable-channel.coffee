@@ -24,49 +24,46 @@ testify.test "A durable channel", (context) ->
 
   context.test "can send and reply to durable messages", (context) ->
 
-    dispatcher = make("dispatcher")
-    worker = make("worker")
+    dispatcher = make("dispatcher-1")
+    worker = make("worker-1")
 
     context.test "sending message", ->
+      dispatcher.send {content: "task", to: "worker-1"}
 
-      dispatcher.send {content: "task", to: "worker", timeout: 5000}
+    context.test "receiving message", (context) ->
+      worker.on "ready", ->
+        worker.on "message", (message) ->
+          assert.ok (message.content is "task")
+          worker.reply {message, response: "reply"}
+          context.pass()
 
-      context.test "receiving message", (context) ->
-        workerListener = worker.listen()
-        workerListener.on "ready", ->
-          workerListener.on "message", (message) ->
-            assert.ok (message.content is "task")
-            worker.reply {message, response: "reply"}
-            context.pass()
-
-      context.test "receiving reply", (context) ->
-        dispatcherListener = dispatcher.listen()
-        dispatcherListener.on "ready", ->
-          dispatcherListener.on "message", (message) ->
-              assert.ok (message.content is "reply")
-              dispatcher.close(message).on "success", ->
-                worker.end()
-                dispatcher.end()
-                context.pass()
+    context.test "receiving reply", (context) ->
+      dispatcher.on "ready", ->
+        dispatcher.on "message", (message) ->
+            assert.ok (message.content is "reply")
+            dispatcher.close(message).on "success", ->
+              worker.end()
+              dispatcher.end()
+              context.pass()
 
 
   context.test "can set timeout on message", (context) ->
 
-    dispatcher = make("dispatcher")
-    worker = make("worker")
+    dispatcher = make("dispatcher-2")
+    worker = make("worker-2")
 
-    timeoutCheck = null
+    context.test "sending message", ->
+      dispatcher.send {content: "task", to: "worker-2", timeout: 1000}
 
-    context.test "sending message", (context) ->
-
-      workerListener = worker.listen()
-      workerListener.on "ready", ->
-        workerListener.on "message", (message) ->
+    context.test "receiving message", (context) ->
+      worker.on "ready", ->
+        worker.on "message", (message) ->
           assert.ok (message.content is "task")
+          context.pass()
 
-      dispatcher.send {content: "task", to: "worker", timeout: 1000}, ->
-        context.test "message timedout", ->
-          clearTimeout(timeoutCheck)
+    context.test "waiting for timeout", (context) ->
+      dispatcher.on "ready", ->
+        dispatcher.on "timeout", ->
           worker.end()
           dispatcher.end()
           context.pass()
