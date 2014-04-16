@@ -6,6 +6,8 @@ Transport = require "./redis-transport"
 
 class DurableChannel extends EventChannel
 
+  stopping: false
+
   constructor: (options) ->
     super
     
@@ -75,19 +77,19 @@ class DurableChannel extends EventChannel
       transport: @transport
     @destinationQueues[name]
 
-  setMessageTimeout: (channel, id, timeout) ->
+  setMessageTimeout: (name, channel, id, timeout) ->
     if channel? and id? and timeout?
       @events.source (events) =>
         @adapter.client.zadd(
-          ["#{@name}.pending", (Date.now() + timeout), "#{channel}::#{id}"], 
+          ["#{name}.pending", (Date.now() + timeout), "#{channel}::#{id}"], 
           events.callback
         )
 
-  clearMessageTimeout: (channel, id) ->
+  clearMessageTimeout: (name, channel, id) ->
     if id?
       @events.source (events) =>
         @adapter.client.zrem(
-          ["#{@name}.pending", "#{channel}::#{id}"]
+          ["#{name}.pending", "#{channel}::#{id}"]
           events.callback
         )
 
@@ -130,7 +132,7 @@ class DurableChannel extends EventChannel
           message = _message
           if message?
             store.delete id
-        go => @clearMessageTimeout channel, id
+        go => @clearMessageTimeout @name, channel, id
         go =>
           if message?
             @fire event: "timeout", content: {content: message.content, requestId: message.requestId}
@@ -143,7 +145,7 @@ class DurableChannel extends EventChannel
         go => @getDestinationStore(to)
         go (store) => store.put message.id, message
         go => @getDestinationQueue(to).emit("message", message.id)
-        go => @setMessageTimeout to, message.id, message.timeout
+        go => @setMessageTimeout @name, to, message.id, message.timeout
         go => events.emit "success"
 
   reply: ({message, response, timeout}) ->
@@ -158,7 +160,7 @@ class DurableChannel extends EventChannel
           @getDestinationStore(request.from)
         go (store) => store.put(message.id, message)
         go => @getDestinationQueue(request.from).emit("message", message.id)
-        go => @setMessageTimeout request.from, message.id, message.timeout
+        go => @setMessageTimeout @name, request.from, message.id, message.timeout
         go => events.emit "success"
 
   close: (message) ->
@@ -167,53 +169,51 @@ class DurableChannel extends EventChannel
       do @events.serially (go) =>
         go => @getStore()
         go (store) => store.delete message.responseId
+        go => @clearMessageTimeout(message.to, message.from, message.responseId)
         go => events.emit "success"
 
   listen: ->
     @events.source (events) =>
       @queue.listen().on "success", => 
         messageHandler = (messageId) =>
+          return if @stopping
+
           message = null
           do @events.serially (go) =>
             go => @getStore()
             go (store) => store.get messageId
             go (_message) => 
               message = _message
-              @clearMessageTimeout(message.from, message.requestId) if message.requestId?
+              @clearMessageTimeout(@name, message.from, message.requestId) if message.requestId?
             go =>
               @getDestinationStore(message.from) if message.requestId?
             go (store) =>
               store.delete(message.requestId) if message.requestId?
             go => 
               _message = content: message.content
+              _message.from = if message.requestId? then message.to else message.from
+              _message.to = if message.requestId? then message.from else message.to
               _message.requestId = (if message.requestId? then message.requestId else message.id)
               _message.responseId = message.id if message.requestId?
               @fire event: "message", content: _message
-            go =>
-              @events.source (events) =>
-                if @channels["message"]?.handlers?.length > 0
-                  events.emit "success"
-                else
-                  @superOn = @on if !@superOn?
-                  @on = (args...) =>
-                    @superOn.call(@, args...)
-                    events.emit "success"
-            go => @queue.once "message", messageHandler
+              @queue.once("message", messageHandler) if @channels["message"]?.handlers?.length > 0
 
-        @queue.once "message", messageHandler
+        @superOn ?= @on
+        @on = (event, handler) =>
+          if event == "message"
+            @superOn event, handler
+            @queue.once "message", messageHandler
+
         events.emit "success"
 
   end: -> 
+    @stopping = true
     clearTimeout @timeoutMonitor
     @adapter.close()
-    try
-      @queue.end()
-      @queue.transport.end()
-    catch
+    @queue.end()
+    # emit a dummy message if queue is not paused as its waiting
+    @queue.emit("shutdown") if @queue.isListening and !@queue.paused
     for key,queue of @destinationQueues
-      try
-        queue.end()
-        queue.transport.end()
-      catch
+      queue.end()
 
 module.exports = DurableChannel

@@ -17,14 +17,14 @@ testify.test "A durable channel", (context) ->
     context.test "receiving message", (context) ->
       worker.on "ready", ->
         worker.listen().on "success", ->
-          worker.once "message", (message) ->
+          worker.on "message", (message) ->
             assert.ok (message.content is "task")
-            worker.reply {message, response: "reply"}
+            worker.reply {message, response: "reply", timeout: 5000}
             context.pass()
 
     context.test "receiving reply", (context) ->
       dispatcher.listen().on "success", ->
-        dispatcher.once "message", (message) ->
+        dispatcher.on "message", (message) ->
             assert.ok (message.content is "reply")
             dispatcher.close(message).on "success", ->
               worker.end()

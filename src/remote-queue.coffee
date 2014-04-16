@@ -4,39 +4,46 @@ class RemoteQueue extends RemoteChannel
   
   # @property [Boolean] stopping
   stopping: false
-      
+  paused: true
+
   send: (message) ->
     @events.source (events) =>
       _events = @transport.enqueue (@package message)
       _events.forward events
-  
+
   listen: ->
     @events.source (events) =>
       unless @isListening
         @isListening = true
-        @end = => @stopping = true
+        
+        _resume = =>
+          @paused = false
+          @end = => @stopping = true
+          setImmediate(_dequeue)
+
+        _pause = =>
+          @paused = true
+          @end = => @transport.end()
+
         _dequeue = =>
           unless @stopping
-            _events = @transport.dequeue @name
-            _events.on "success", (message) =>
-              @events.source 
+            @transport.dequeue(@name).on "success", (message) =>
               @fire message
-              do @events.serially (go) =>
-                go =>
-                  @events.source (events) =>
-                    if @channels[message.event]?.handlers?.length > 0
-                      events.emit "success"
-                    else
-                      @superOn = @on if !@superOn?
-                      @on = (args...) =>
-                        @superOn.call(@, args...)
-                        events.emit "success"
-                go => setImmediate _dequeue
+              if @channels[message.event]?.handlers?.length > 0
+                _resume()
+              else
+                _pause()
           else
             @transport.end()
-            
-        _dequeue()
+
+        @superOn ?= @on
+        @on = (event, handler) =>
+          unless event in ["success", "error", "ready"]
+            @superOn(event, handler)
+            _resume()
+
+        _pause()
         events.emit "success"
-          
+
 module.exports = RemoteQueue
   
