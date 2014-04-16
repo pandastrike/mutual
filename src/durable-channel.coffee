@@ -144,8 +144,8 @@ class DurableChannel extends EventChannel
       do @events.serially (go) =>
         go => @getDestinationStore(to)
         go (store) => store.put message.id, message
-        go => @getDestinationQueue(to).emit("message", message.id)
         go => @setMessageTimeout @name, to, message.id, message.timeout
+        go => @getDestinationQueue(to).emit("message", message.id)
         go => events.emit "success"
 
   reply: ({message, response, timeout}) ->
@@ -159,8 +159,8 @@ class DurableChannel extends EventChannel
           message = @package({content: response, to: request.from, requestId: message.requestId, timeout})
           @getDestinationStore(request.from)
         go (store) => store.put(message.id, message)
-        go => @getDestinationQueue(request.from).emit("message", message.id)
         go => @setMessageTimeout @name, request.from, message.id, message.timeout
+        go => @getDestinationQueue(request.from).emit("message", message.id)
         go => events.emit "success"
 
   close: (message) ->
