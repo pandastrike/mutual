@@ -1,44 +1,44 @@
-{Redis} = require "pirate"
 {randomKey} = require "key-forge"
+{Redis} = require "pirate"
 EventChannel = require "./event-channel"
 RemoteQueue = require "./remote-queue"
 Transport = require "./redis-transport"
-{overload} = require "typely"
 
 class DurableChannel extends EventChannel
 
-  constructor: (@options) ->
+  constructor: (options) ->
     super
     
-    {@name, @timeoutMonitorFrequency} = @options
+    {@name, @transport, @adapter, @timeoutMonitorFrequency} = options
 
     unless @name?
       throw new Error "Durable channels cannot be anonymous"
 
-    @events = new EventChannel
-
     @timeoutMonitor = null
     @timeoutMonitorFrequency ?= 1000
 
-    @store = null
-    @destinationStores = {}
-
-    @monitorTimeouts()
+    @events = new EventChannel
 
     @adapter = new Redis.Adapter
       events: new EventChannel
-      host: @options.redis.host
-      port: @options.redis.port
+      host: options.redis.host
+      port: options.redis.port
+    @adapter.events.on "ready", => @fire event: "ready"
 
-    @inAdapter = new Redis.Adapter
-      events: new EventChannel
-      host: @options.redis.host
-      port: @options.redis.port
+    @transport = new Transport
+      host: "127.0.0.1"
+      port: 6379
+    @transport.events.forward @events
 
-    @adapter.events.on "ready", => 
-      @inAdapter.events.on "ready", =>
-        @startListening()
-        @fire event: "ready"
+    @store = null
+    @queue = new RemoteQueue
+      name: "#{@name}.queue"
+      transport: @transport
+
+    @destinationStores = {}
+    @destinationQueues = {}
+
+    @monitorTimeouts()
 
   package: ({content, to, requestId, timeout}) ->
     message = 
@@ -68,6 +68,12 @@ class DurableChannel extends EventChannel
           go (store) => 
             @destinationStores[name] = store
             events.emit "success", store
+
+  getDestinationQueue: (name) ->
+    @destinationQueues[name] ?= new RemoteQueue
+      name: "#{name}.queue"
+      transport: @transport
+    @destinationQueues[name]
 
   setMessageTimeout: (channel, id, timeout) ->
     if channel? and id? and timeout?
@@ -136,9 +142,7 @@ class DurableChannel extends EventChannel
       do @events.serially (go) =>
         go => @getDestinationStore(to)
         go (store) => store.put message.id, message
-        go => 
-          @events.source (events) =>
-            @adapter.client.lpush "#{to}.queue", message.id, events.callback
+        go => @getDestinationQueue(to).emit("message", message.id)
         go => @setMessageTimeout to, message.id, message.timeout
         go => events.emit "success"
 
@@ -153,9 +157,7 @@ class DurableChannel extends EventChannel
           message = @package({content: response, to: request.from, requestId: message.requestId, timeout})
           @getDestinationStore(request.from)
         go (store) => store.put(message.id, message)
-        go => 
-          @events.source (events) =>
-            @adapter.client.lpush "#{request.from}.queue", message.id, events.callback
+        go => @getDestinationQueue(request.from).emit("message", message.id)
         go => @setMessageTimeout request.from, message.id, message.timeout
         go => events.emit "success"
 
@@ -167,40 +169,51 @@ class DurableChannel extends EventChannel
         go (store) => store.delete message.responseId
         go => events.emit "success"
 
-  startListening: ->
-    messageHandler = (err, [..., messageId]) =>
-      message = null
-      do @events.serially (go) =>
-        go => @getStore()
-        go (store) => store.get messageId
-        go (_message) => 
-          message = _message
-          @clearMessageTimeout(message.from, message.requestId) if message.requestId?
-        go =>
-          @getDestinationStore(message.from) if message.requestId?
-        go (store) =>
-          store.delete(message.requestId) if message.requestId?
-        go => 
-          _message = content: message.content
-          _message.requestId = (if message.requestId? then message.requestId else message.id)
-          _message.responseId = message.id if message.requestId?
-          @fire event: "message", content: _message
-        go =>
-          @events.source (events) =>
-            if (@channels["message"].handlers.length > 0)
-              events.emit "success"
-            else
-              @superOn = @on if !@superOn?
-              @on = (args...) =>
-                @superOn.call(@, args...)
-                events.emit "success"
-        go => @inAdapter.client.brpop ["#{@name}.queue", 0], messageHandler
+  listen: ->
+    @events.source (events) =>
+      @queue.listen().on "success", => 
+        messageHandler = (messageId) =>
+          message = null
+          do @events.serially (go) =>
+            go => @getStore()
+            go (store) => store.get messageId
+            go (_message) => 
+              message = _message
+              @clearMessageTimeout(message.from, message.requestId) if message.requestId?
+            go =>
+              @getDestinationStore(message.from) if message.requestId?
+            go (store) =>
+              store.delete(message.requestId) if message.requestId?
+            go => 
+              _message = content: message.content
+              _message.requestId = (if message.requestId? then message.requestId else message.id)
+              _message.responseId = message.id if message.requestId?
+              @fire event: "message", content: _message
+            go =>
+              @events.source (events) =>
+                if @channels["message"]?.handlers?.length > 0
+                  events.emit "success"
+                else
+                  @superOn = @on if !@superOn?
+                  @on = (args...) =>
+                    @superOn.call(@, args...)
+                    events.emit "success"
+            go => @queue.once "message", messageHandler
 
-    @inAdapter.client.brpop ["#{@name}.queue", 0], messageHandler
+        @queue.once "message", messageHandler
+        events.emit "success"
 
   end: -> 
     clearTimeout @timeoutMonitor
     @adapter.close()
-    @inAdapter.close()
+    try
+      @queue.end()
+      @queue.transport.end()
+    catch
+    for key,queue of @destinationQueues
+      try
+        queue.end()
+        queue.transport.end()
+      catch
 
 module.exports = DurableChannel

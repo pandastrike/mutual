@@ -11,23 +11,25 @@ testify.test "A durable channel", (context) ->
     worker = new DurableChannel({name: "worker-1", redis: {host: "127.0.0.1", port: 6379}})
 
     context.test "sending message", ->
-      dispatcher.once "ready", ->
+      dispatcher.on "ready", ->
         dispatcher.send {content: "task", to: "worker-1"}
 
     context.test "receiving message", (context) ->
-      worker.once "ready", ->
-        worker.once "message", (message) ->
-          assert.ok (message.content is "task")
-          worker.reply {message, response: "reply"}
-          context.pass()
+      worker.on "ready", ->
+        worker.listen().on "success", ->
+          worker.once "message", (message) ->
+            assert.ok (message.content is "task")
+            worker.reply {message, response: "reply"}
+            context.pass()
 
     context.test "receiving reply", (context) ->
-      dispatcher.once "message", (message) ->
-          assert.ok (message.content is "reply")
-          dispatcher.close(message).on "success", ->
-            worker.end()
-            dispatcher.end()
-            context.pass()
+      dispatcher.listen().on "success", ->
+        dispatcher.once "message", (message) ->
+            assert.ok (message.content is "reply")
+            dispatcher.close(message).on "success", ->
+              worker.end()
+              dispatcher.end()
+              context.pass()
 
 
   context.test "can set timeout on message", (context) ->
@@ -36,14 +38,15 @@ testify.test "A durable channel", (context) ->
     worker = new DurableChannel({name: "worker-2", redis: {host: "127.0.0.1", port: 6379}})
 
     context.test "sending message", ->
-      dispatcher.once "ready", ->
+      dispatcher.on "ready", ->
         dispatcher.send {content: "task", to: "worker-2", timeout: 1000}
 
     context.test "receiving message", (context) ->
-      worker.once "ready", ->
-        worker.once "message", (message) ->
-          assert.ok (message.content is "task")
-          context.pass()
+        worker.on "ready", ->
+        worker.listen().on "success", ->
+          worker.once "message", (message) ->
+            assert.ok (message.content is "task")
+            context.pass()
 
     context.test "waiting for timeout", (context) ->
       dispatcher.once "timeout", ->

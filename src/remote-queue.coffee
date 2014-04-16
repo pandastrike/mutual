@@ -19,8 +19,19 @@ class RemoteQueue extends RemoteChannel
           unless @stopping
             _events = @transport.dequeue @name
             _events.on "success", (message) =>
+              @events.source 
               @fire message
-              setImmediate _dequeue
+              do @events.serially (go) =>
+                go =>
+                  @events.source (events) =>
+                    if @channels[message.event]?.handlers?.length > 0
+                      events.emit "success"
+                    else
+                      @superOn = @on if !@superOn?
+                      @on = (args...) =>
+                        @superOn.call(@, args...)
+                        events.emit "success"
+                go => setImmediate _dequeue
           else
             @transport.end()
             
