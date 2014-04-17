@@ -6,12 +6,10 @@ Transport = require "./redis-transport"
 
 class DurableChannel extends EventChannel
 
-  stopping: false
-
   constructor: (options) ->
     super
     
-    {@name, @transport, @adapter, @timeoutMonitorFrequency} = options
+    {@name, @timeoutMonitorFrequency} = options
 
     unless @name?
       throw new Error "Durable channels cannot be anonymous"
@@ -28,8 +26,8 @@ class DurableChannel extends EventChannel
     @adapter.events.on "ready", => @fire event: "ready"
 
     @transport = new Transport
-      host: "127.0.0.1"
-      port: 6379
+      host: options.redis.host
+      port: options.redis.port
     @transport.events.forward @events
 
     @store = null
@@ -176,8 +174,6 @@ class DurableChannel extends EventChannel
     @events.source (events) =>
       @queue.listen().on "success", => 
         messageHandler = (messageId) =>
-          return if @stopping
-
           message = null
           do @events.serially (go) =>
             go => @getStore()
@@ -193,7 +189,7 @@ class DurableChannel extends EventChannel
               _message = content: message.content
               _message.from = if message.requestId? then message.to else message.from
               _message.to = if message.requestId? then message.from else message.to
-              _message.requestId = (if message.requestId? then message.requestId else message.id)
+              _message.requestId = if message.requestId? then message.requestId else message.id
               _message.responseId = message.id if message.requestId?
               @fire event: "message", content: _message
               @queue.once("message", messageHandler) if @channels["message"]?.handlers?.length > 0
@@ -207,12 +203,9 @@ class DurableChannel extends EventChannel
         events.emit "success"
 
   end: -> 
-    @stopping = true
     clearTimeout @timeoutMonitor
     @adapter.close()
     @queue.end()
-    # emit a dummy message if queue is not paused as its waiting
-    @queue.emit("shutdown") if @queue.isListening and !@queue.paused
     for key,queue of @destinationQueues
       queue.end()
 

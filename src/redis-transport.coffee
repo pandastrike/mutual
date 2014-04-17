@@ -8,6 +8,8 @@ class RedisTransport
   constructor: (options) ->
     @events = new EventChannel
     poolEvents = @events.source "pool"
+    {@blockTimeout} = options
+    @blockTimeout ?= 1
     @clients = Pool
       name: "redis-transport", max: 10
       create: (callback) =>
@@ -50,16 +52,21 @@ class RedisTransport
     
   dequeue: (name) ->
     @events.source (events) =>
-      @_acquire (client) =>
-        @events.source (_events) =>
-          _events.on "*", => @_release client
-          name = if (type name) is "array" then name else [ name ]
-          client.brpop name..., 0, _events.callback
-          _events.on "success", (results) =>
-            events.safely =>
-              [key, json] = results
-              message = JSON.parse(json)
-              events.emit "success", message
+      do _dequeue = =>
+        try
+          @_acquire (client) =>
+            @events.source (_events) =>
+              _events.on "*", => @_release client
+              name = if (type name) is "array" then name else [ name ]
+              client.brpop name..., @blockTimeout, _events.callback
+              _events.on "success", (results) =>
+                return _dequeue() unless results?
+                events.safely =>
+                  [key, json] = results
+                  message = JSON.parse(json)
+                  events.emit "success", message
+        catch
+          events.emit "error"
       
   _acquire: (handler) ->
     @events.source (events) =>
