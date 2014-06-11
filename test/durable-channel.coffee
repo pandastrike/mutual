@@ -43,13 +43,57 @@ testify.test "A durable channel", (context) ->
 
     context.test "receiving message", (context) ->
         worker.on "ready", ->
-        worker.listen().on "success", ->
-          worker.once "message", (message) ->
-            assert.ok (message.content is "task")
-            context.pass()
+          worker.listen().on "success", ->
+            worker.once "message", (message) ->
+              assert.ok (message.content is "task")
+              context.pass()
 
     context.test "waiting for timeout", (context) ->
       dispatcher.once "timeout", ->
         worker.end()
         dispatcher.end()
         context.pass()
+
+
+  context.test "replying to a timed out message", (context) ->
+
+    dispatcher = new DurableChannel({name: "dispatcher-3", redis: {host: "127.0.0.1", port: 6379}})
+    worker = new DurableChannel({name: "worker-3", redis: {host: "127.0.0.1", port: 6379}})
+
+    context.test "sending message", ->
+      dispatcher.on "ready", ->
+        dispatcher.send {content: "task", to: "worker-3", timeout: 2000}
+
+    context.test "receiving message", (context) ->
+      worker.on "ready", ->
+        worker.listen().on "success", ->
+          worker.once "message" , (message) ->
+            timeoutListener = ->
+              worker.reply {message, response: "reply", timeout: 2000}
+              worker.end()
+              dispatcher.end()
+              context.pass()
+            setTimeout(timeoutListener, 3000)
+
+
+  context.test "worker receives a timed out message", (context) ->
+
+    dispatcher = new DurableChannel({name: "dispatcher-4", redis: {host: "127.0.0.1", port: 6379}})
+    worker = new DurableChannel({name: "worker-4", redis: {host: "127.0.0.1", port: 6379}})
+
+    context.test "sending message", ->
+      dispatcher.on "ready", ->
+        dispatcher.send {content: "task", to: "worker-4", timeout: 2000}
+
+    context.test "receiving message", (context) ->
+      worker.on "ready", ->
+        worker.listen().on "success", ->
+          timeoutListener = ->
+            worker.once "message", (message) ->
+              context.fail("worker received a timed out message")
+            setTimeout -> 
+                worker.end()
+                dispatcher.end()
+                context.pass()
+              , 100
+          setTimeout(timeoutListener, 3000)
