@@ -1,6 +1,6 @@
 {
   "name": "mutual",
-  "version": "0.4.12",
+  "version": "0.4.13",
   "description": "Scala-inspired Actors that use Redis as a message transport",
   "main": "lib/index.js",
   "scripts": {
