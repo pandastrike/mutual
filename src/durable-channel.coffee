@@ -53,21 +53,19 @@ class DurableChannel extends EventChannel
     if @store?
       @store
     else
-      @events.source (events) =>
-        do @events.serially (go) =>
-          go => @adapter.collection "#{@name}.messages"
-          go (@store) => events.emit "success", @store
+      do @events.serially (go) =>
+        go => @adapter.collection "#{@name}.messages"
+        go (@store) => @store
 
   getDestinationStore: (name) ->
     if @destinationStores[name]?
       @destinationStores[name]
     else
-      @events.source (events) =>
-        do @events.serially (go) =>
-          go => @adapter.collection "#{name}.messages"
-          go (store) => 
-            @destinationStores[name] = store
-            events.emit "success", store
+      do @events.serially (go) =>
+        go => @adapter.collection "#{name}.messages"
+        go (store) => 
+          @destinationStores[name] = store
+          store
 
   getDestinationQueue: (name) ->
     @destinationQueues[name] ?= new RemoteQueue
@@ -117,61 +115,52 @@ class DurableChannel extends EventChannel
     @timeoutMonitor = setTimeout(loopToMonitor, @timeoutMonitorFrequency)
 
   expireMessage: (channel, id) ->
-    @events.source (events) =>
-
-      store = null
-      message = null
-      do @events.serially (go) =>
-        go => @getDestinationStore channel
-        go (_store) => 
-          store = _store
-          store.get(id)
-        go (_message) => 
-          message = _message
-          if message?
-            store.delete id
-        go => @clearMessageTimeout @name, channel, id
-        go =>
-          if message?
-            @fire event: "timeout", content: {content: message.content, requestId: message.requestId}
-          events.emit "success"
+    store = null
+    message = null
+    do @events.serially (go) =>
+      go => @getDestinationStore channel
+      go (_store) => 
+        store = _store
+        store.get(id)
+      go (_message) => 
+        message = _message
+        if message?
+          store.delete id
+      go => @clearMessageTimeout @name, channel, id
+      go =>
+        if message?
+          @fire event: "timeout", content: {content: message.content, requestId: message.requestId}
 
   send: ({content, to, timeout}) ->
-    @events.source (events) =>
-      message = @package({content, to, timeout})
-      do @events.serially (go) =>
-        go => @getDestinationStore(to)
-        go (store) => store.put message.id, message
-        go => @setMessageTimeout @name, to, message.id, message.timeout
-        go => @getDestinationQueue(to).emit("message", message.id)
-        go => events.emit "success"
+    message = @package({content, to, timeout})
+    do @events.serially (go) =>
+      go => @getDestinationStore(to)
+      go (store) => store.put message.id, message
+      go => @setMessageTimeout @name, to, message.id, message.timeout
+      go => @getDestinationQueue(to).emit("message", message.id)
 
   reply: ({message, response, timeout}) ->
-    @events.source (events) =>
-      do @events.serially (go) =>
-        go => @getStore()
-        go (store) => store.get message.requestId
-        go (request) =>
-          # its possible that this is a reply to a message that already timed out
-          return unless request?
-          
-          do @events.serially (go) =>
-            go => 
-              message = @package({content: response, to: request.from, requestId: message.requestId, timeout})
-              @getDestinationStore(request.from)
-            go (store) => store.put(message.id, message)
-            go => @setMessageTimeout @name, request.from, message.id, message.timeout
-            go => @getDestinationQueue(request.from).emit("message", message.id)
-            go => events.emit "success"
+    do @events.serially (go) =>
+      go => @getStore()
+      go (store) => store.get message.requestId
+      go (request) =>
+        # its possible that this is a reply to a message that already timed out
+        return unless request?
+        
+        do @events.serially (go) =>
+          go => 
+            message = @package({content: response, to: request.from, requestId: message.requestId, timeout})
+            @getDestinationStore(request.from)
+          go (store) => store.put(message.id, message)
+          go => @setMessageTimeout @name, request.from, message.id, message.timeout
+          go => @getDestinationQueue(request.from).emit("message", message.id)
 
   close: (message) ->
-    @events.source (events) =>
-      request = null
-      do @events.serially (go) =>
-        go => @getStore()
-        go (store) => store.delete message.responseId
-        go => @clearMessageTimeout(message.to, message.from, message.responseId)
-        go => events.emit "success"
+    request = null
+    do @events.serially (go) =>
+      go => @getStore()
+      go (store) => store.delete message.responseId
+      go => @clearMessageTimeout(message.to, message.from, message.responseId)
 
   listen: ->
     @events.source (events) =>
@@ -198,7 +187,8 @@ class DurableChannel extends EventChannel
                   _message.requestId = if message.requestId? then message.requestId else message.id
                   _message.responseId = message.id if message.requestId?
                   @fire event: "message", content: _message
-                  @queue.once("message", messageHandler) if @channels["message"]?.handlers?.length > 0
+            go =>
+              @queue.once("message", messageHandler) if @channels["message"]?.handlers?.length > 0
 
         @superOn ?= @on
         @on = (event, handler) =>
