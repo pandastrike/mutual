@@ -202,8 +202,8 @@ class DurableChannel extends EventChannel
 
         @superOn ?= @on
         @on = (event, handler) =>
+          @superOn event, handler
           if event == "message"
-            @superOn event, handler
             @queue.once "message", messageHandler
 
         events.emit "success"
