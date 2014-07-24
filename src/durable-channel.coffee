@@ -50,28 +50,23 @@ class DurableChannel extends EventChannel
       content: content
 
   getStore: ->
-    if @store?
-      @store
-    else
-      do @events.serially (go) =>
-        go => @adapter.collection "#{@name}.messages"
-        go (@store) => @store
+    return @store if @store?
+    
+    do @events.serially (go) =>
+      go => @adapter.collection "#{@name}.messages"
+      go (@store) => @store
 
   getDestinationStore: (name) ->
-    if @destinationStores[name]?
-      @destinationStores[name]
-    else
-      do @events.serially (go) =>
-        go => @adapter.collection "#{name}.messages"
-        go (store) => 
-          @destinationStores[name] = store
-          store
+    return @destinationStores[name] if @destinationStores[name]?
+
+    do @events.serially (go) =>
+      go => @adapter.collection "#{name}.messages"
+      go (store) => @destinationStores[name] = store
 
   getDestinationQueue: (name) ->
     @destinationQueues[name] ?= new RemoteQueue
       name: "#{name}.queue"
       transport: @transport
-    @destinationQueues[name]
 
   setMessageTimeout: (name, channel, id, timeout) ->
     if channel? and id? and timeout?
@@ -85,6 +80,14 @@ class DurableChannel extends EventChannel
     if id?
       @events.source (events) =>
         @adapter.client.zrem(
+          ["#{name}.pending", "#{channel}::#{id}"]
+          events.callback
+        )
+
+  getMessageTimeout: (name, channel, id) ->
+    if id?
+      @events.source (events) =>
+        @adapter.client.zscore(
           ["#{name}.pending", "#{channel}::#{id}"]
           events.callback
         )
@@ -124,18 +127,24 @@ class DurableChannel extends EventChannel
         store.get(id)
       go (_message) => 
         message = _message
-        if message?
-          store.delete id
-      go => @clearMessageTimeout @name, channel, id
-      go =>
-        if message?
-          @fire event: "timeout", content: {content: message.content, requestId: message.requestId}
+      go => @getMessageTimeout @name, channel, id
+      go (timeout) =>
+        # if reply was sent in the meantime, timeout would have been cleared, we shouldn't fire timeout if it was replied
+        return unless timeout?
+        do @events.serially (go) =>
+          go =>
+            if message?
+              store.delete id
+          go => @clearMessageTimeout @name, channel, id
+          go =>
+            if message?
+              @fire event: "timeout", content: {content: message.content, requestId: message.requestId}
 
   send: ({content, to, timeout}) ->
     message = @package({content, to, timeout})
     do @events.serially (go) =>
       go => @getDestinationStore(to)
-      go (store) => store.put message.id, message
+      go (destStore) => destStore.put message.id, message
       go => @setMessageTimeout @name, to, message.id, message.timeout
       go => @getDestinationQueue(to).emit("message", message.id)
 
@@ -145,18 +154,17 @@ class DurableChannel extends EventChannel
       go (store) => store.get message.requestId
       go (request) =>
         # its possible that this is a reply to a message that already timed out
-        return unless request?
+        return null unless request?
         
+        message = @package({content: response, to: request.from, requestId: message.requestId, timeout})
         do @events.serially (go) =>
-          go => 
-            message = @package({content: response, to: request.from, requestId: message.requestId, timeout})
-            @getDestinationStore(request.from)
-          go (store) => store.put(message.id, message)
+          go => @clearMessageTimeout(request.from, @name, message.requestId)
+          go => @getDestinationStore(request.from)
+          go (destStore) => destStore.put(message.id, message)
           go => @setMessageTimeout @name, request.from, message.id, message.timeout
           go => @getDestinationQueue(request.from).emit("message", message.id)
 
   close: (message) ->
-    request = null
     do @events.serially (go) =>
       go => @getStore()
       go (store) => store.delete message.responseId
@@ -166,27 +174,44 @@ class DurableChannel extends EventChannel
     @events.source (events) =>
       @queue.listen().on "success", => 
         messageHandler = (messageId) =>
+          store = null
           do @events.serially (go) =>
             go => @getStore()
-            go (store) => store.get messageId
-            go (message) => 
+            go (_store) => 
+              store = _store
+              store.get messageId
+            go (message) =>
               # its possible that this message has already timed out and no longer available in the store
-              return unless message?
-              
-              do @events.serially (go) =>
-                go =>
-                  @clearMessageTimeout(@name, message.from, message.requestId) if message.requestId?
-                go =>
-                  @getDestinationStore(message.from) if message.requestId?
-                go (store) =>
-                  store.delete(message.requestId) if message.requestId?
-                go => 
-                  _message = content: message.content
-                  _message.from = if message.requestId? then message.to else message.from
-                  _message.to = if message.requestId? then message.from else message.to
-                  _message.requestId = if message.requestId? then message.requestId else message.id
-                  _message.responseId = message.id if message.requestId?
-                  @fire event: "message", content: _message
+              return null unless message?
+
+              return message unless message.requestId?
+
+              destStore = null
+              @events.source (events) =>
+                do @events.serially (go) =>
+                  go => @getDestinationStore(message.from)
+                  go (_destStore) => 
+                    destStore = _destStore
+                    destStore.get(message.requestId)
+                  go (request) =>
+                    do @events.serially (go) =>
+                      go => 
+                        if request?
+                          # now that we got the reply, we can delete the original request
+                          destStore.delete(message.requestId)
+                        else
+                          # request has timed out, we should close it as the sender won't receive this message
+                          store.delete(messageId)
+                      go => 
+                        events.emit("success", (if request? then message else null))
+            go (message) =>
+              if message?
+                _message = content: message.content
+                _message.from = if message.requestId? then message.to else message.from
+                _message.to = if message.requestId? then message.from else message.to
+                _message.requestId = if message.requestId? then message.requestId else message.id
+                _message.responseId = message.id if message.requestId?
+                @fire event: "message", content: _message
             go =>
               @queue.once("message", messageHandler) if @channels["message"]?.handlers?.length > 0
 

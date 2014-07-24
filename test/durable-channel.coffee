@@ -97,3 +97,42 @@ testify.test "A durable channel", (context) ->
                 context.pass()
               , 100
           setTimeout(timeoutListener, 3000)
+
+
+  context.test "dispatcher sends 1K messages in quick succession", (context) ->
+    messageCount = 1000
+    replies = 0
+    timeouts = 0
+
+    dispatcher = new DurableChannel({name: "dispatcher-5", redis: {host: "127.0.0.1", port: 6379}})
+    worker = new DurableChannel({name: "worker-5", redis: {host: "127.0.0.1", port: 6379}})
+
+    context.test "sending 1K messages", (context) ->
+      worker.on "ready", ->
+        dispatcher.listen().on "success", ->
+          endWhenDone = ->
+            if messageCount == timeouts + replies
+              setTimeout ->
+                dispatcher.end()
+                worker.end()
+                if messageCount < timeouts + replies
+                  context.fail()
+                else
+                  context.pass()
+              , 3000
+          dispatcher.on "timeout", (message) ->
+            timeouts++
+            endWhenDone()
+          dispatcher.on "message", (message) ->
+            dispatcher.close(message).on "success", ->
+              replies++
+              endWhenDone()
+
+        for i in [1..messageCount]
+          dispatcher.send {content: i, to: "worker-5", timeout: 500}
+
+    context.test "receiving 1K messages", ->
+      worker.on "ready", ->
+        worker.listen().on "success", ->
+          worker.on "message", (message) ->
+            worker.reply {message, response: message.content}
