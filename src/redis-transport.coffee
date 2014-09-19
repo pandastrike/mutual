@@ -53,6 +53,7 @@ class RedisTransport
     
     
   dequeue: (name) ->
+    @ending = false
     @events.source (events) =>
       do _dequeue = =>
         try
