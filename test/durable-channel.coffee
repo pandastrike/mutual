@@ -1,14 +1,17 @@
 EventChannel = require "../src/event-channel"
 DurableChannel = require "../src/durable-channel"
+RedisTransport = require "../src/redis-transport"
 helpers = require "./helpers"
 {testify, assert, events} = helpers
+
+redisOptions = {host: "127.0.0.1", port: 6379}
 
 testify.test "A durable channel", (context) ->
 
   context.test "can send and reply to durable messages", (context) ->
 
-    dispatcher = new DurableChannel({name: "dispatcher-1", redis: {host: "127.0.0.1", port: 6379}})
-    worker = new DurableChannel({name: "worker-1", redis: {host: "127.0.0.1", port: 6379}})
+    dispatcher = new DurableChannel({name: "dispatcher-1", redis: redisOptions})
+    worker = new DurableChannel({name: "worker-1", redis: redisOptions})
 
     context.test "sending message", ->
       dispatcher.on "ready", ->
@@ -34,8 +37,8 @@ testify.test "A durable channel", (context) ->
 
   context.test "can set timeout on message", (context) ->
 
-    dispatcher = new DurableChannel({name: "dispatcher-2", redis: {host: "127.0.0.1", port: 6379}})
-    worker = new DurableChannel({name: "worker-2", redis: {host: "127.0.0.1", port: 6379}})
+    dispatcher = new DurableChannel({name: "dispatcher-2", redis: redisOptions})
+    worker = new DurableChannel({name: "worker-2", redis: redisOptions})
 
     context.test "sending message", ->
       dispatcher.on "ready", ->
@@ -57,8 +60,8 @@ testify.test "A durable channel", (context) ->
 
   context.test "replying to a timed out message", (context) ->
 
-    dispatcher = new DurableChannel({name: "dispatcher-3", redis: {host: "127.0.0.1", port: 6379}})
-    worker = new DurableChannel({name: "worker-3", redis: {host: "127.0.0.1", port: 6379}})
+    dispatcher = new DurableChannel({name: "dispatcher-3", redis: redisOptions})
+    worker = new DurableChannel({name: "worker-3", redis: redisOptions})
 
     context.test "sending message", ->
       dispatcher.on "ready", ->
@@ -78,8 +81,8 @@ testify.test "A durable channel", (context) ->
 
   context.test "worker receives a timed out message", (context) ->
 
-    dispatcher = new DurableChannel({name: "dispatcher-4", redis: {host: "127.0.0.1", port: 6379}})
-    worker = new DurableChannel({name: "worker-4", redis: {host: "127.0.0.1", port: 6379}})
+    dispatcher = new DurableChannel({name: "dispatcher-4", redis: redisOptions})
+    worker = new DurableChannel({name: "worker-4", redis: redisOptions})
 
     context.test "sending message", ->
       dispatcher.on "ready", ->
@@ -104,8 +107,10 @@ testify.test "A durable channel", (context) ->
     replies = 0
     timeouts = 0
 
-    dispatcher = new DurableChannel({name: "dispatcher-5", redis: {host: "127.0.0.1", port: 6379}})
-    worker = new DurableChannel({name: "worker-5", redis: {host: "127.0.0.1", port: 6379}})
+    @transport = new RedisTransport redisOptions
+
+    dispatcher = new DurableChannel({name: "dispatcher-5", redis: redisOptions, transport: @transport})
+    worker = new DurableChannel({name: "worker-5", redis: redisOptions, transport: @transport})
 
     context.test "sending 1K messages", (context) ->
       worker.on "ready", ->
