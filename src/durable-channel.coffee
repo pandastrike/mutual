@@ -234,6 +234,6 @@ class DurableChannel extends EventChannel
 
   end: -> 
     clearTimeout @timeoutMonitor
-    @queue.end(!@isTransportShared)
+    @transport.end(!@isTransportShared)
 
 module.exports = DurableChannel
