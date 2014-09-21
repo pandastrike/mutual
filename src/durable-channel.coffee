@@ -8,7 +8,9 @@ class DurableChannel extends EventChannel
 
   constructor: (options) ->
     super
-    
+
+    @ending = false
+
     {@name, @timeoutMonitorFrequency, @transport} = options
 
     unless @name?
@@ -137,7 +139,8 @@ class DurableChannel extends EventChannel
                 events.emit("success") if returned == expiredMessages.length
               _events.on "error", (err) -> events.emit "error", err
         go => 
-          @timeoutMonitor = setTimeout(loopToMonitor, @timeoutMonitorFrequency)
+          if !@ending
+            @timeoutMonitor = setTimeout(loopToMonitor, @timeoutMonitorFrequency)
 
     @timeoutMonitor = setTimeout(loopToMonitor, @timeoutMonitorFrequency)
 
@@ -233,6 +236,7 @@ class DurableChannel extends EventChannel
         events.emit "success"
 
   end: -> 
+    @ending = true
     clearTimeout @timeoutMonitor
     @transport.end("#{@name}.queue", !@isTransportShared)
 
