@@ -20,8 +20,8 @@ class RemoteQueue extends RemoteChannel
 
         @superOn ?= @on
         @on = (event, handler) =>
+          @superOn(event, handler)
           unless event in ["success", "error", "ready"]
-            @superOn(event, handler)
             _dequeue()
 
         events.emit "success"

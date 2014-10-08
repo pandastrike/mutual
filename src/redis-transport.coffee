@@ -6,12 +6,14 @@ EventChannel = require "./event-channel"
 class RedisTransport
   
   constructor: (options) ->
+    @ending = {}
     @events = new EventChannel
     poolEvents = @events.source "pool"
-    {@blockTimeout} = options
+    {@blockTimeout, poolSize} = options
     @blockTimeout ?= 1
+    poolSize ?= 10
     @clients = Pool
-      name: "redis-transport", max: 10
+      name: "redis-transport", max: poolSize
       create: (callback) =>
         {port, host} = options
         client = redis.createClient port, host, options.redis
@@ -51,6 +53,7 @@ class RedisTransport
     
     
   dequeue: (name) ->
+    @ending[name] = false
     @events.source (events) =>
       do _dequeue = =>
         try
@@ -60,6 +63,9 @@ class RedisTransport
               name = if (type name) is "array" then name else [ name ]
               client.brpop name..., @blockTimeout, _events.callback
               _events.on "success", (results) =>
+                if @ending[name]? and @ending[name] == true
+                  delete @ending[name]
+                  return
                 return _dequeue() unless results?
                 events.safely =>
                   [key, json] = results
@@ -74,7 +80,10 @@ class RedisTransport
       events.on "success", (client) => handler client
        
   _release: (client) -> @clients.release client
-    
-  end: -> @clients.drain => @clients.destroyAllNow()
+
+  end: (name = "", destroyConnections = true) -> 
+    @ending[name] = true
+    if destroyConnections
+      @clients.drain => @clients.destroyAllNow()
   
 module.exports = RedisTransport
