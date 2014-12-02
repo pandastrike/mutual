@@ -9,3 +9,4 @@ Object.defineProperties module.exports,
   RedisTransport: getter -> require "./redis-transport"
   RemoteQueue: getter -> require "./remote-queue"
   DurableChannel: getter -> require "./durable-channel"
+  Promiseifier: getter -> require "./promiseifier"
