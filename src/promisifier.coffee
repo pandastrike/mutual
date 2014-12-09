@@ -1,7 +1,7 @@
 {promise} = require "when"
 EventChannel = require "./event-channel"
 
-module.exports = class Promiseifier
+module.exports = class Promisifier
 
   @wrap: (f) ->
     unless typeof f == "function"
@@ -17,9 +17,9 @@ module.exports = class Promiseifier
           promise (resolve, reject) ->
             resolve(rVal)
 
-  @promiseify: (evented) ->
+  @promisify: (evented) ->
     promised = new Object(evented)
-    promised[k] = Promiseifier.wrap(f) for k,f of evented
+    promised[k] = Promisifier.wrap(f) for k,f of evented
     if evented.prototype?
-      promised.prototype = Promiseifier.promiseify(evented.prototype)
+      promised.prototype = Promisifier.promisify(evented.prototype)
     promised
