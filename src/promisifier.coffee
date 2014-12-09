@@ -11,8 +11,13 @@ module.exports = class Promisifier
         rVal = f.apply @, arguments
         if rVal instanceof EventChannel
           promise (resolve, reject) ->
-            rVal.on "success", (data) -> resolve(data)
-            rVal.on "error", (err) -> reject(err)
+            _err = null
+            rVal.on "error", (err) -> _err = err
+            rVal.on "*", (data) ->
+              unless _err?
+                resolve(data)
+              else
+                reject(_err)
         else
           promise (resolve, reject) ->
             resolve(rVal)
