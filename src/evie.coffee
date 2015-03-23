@@ -1,6 +1,4 @@
-{promise, resolve} = require "when"
-{async, is_string, is_object, is_function, empty, first} = require "fairmont"
-Local = require "./transport/local"
+{is_string, is_object, is_function, first} = require "fairmont"
 
 assert = (x) ->
   throw new TypeError unless x
@@ -14,16 +12,15 @@ map = (fn) ->
       fn.call @, args...
     @
 
-class Channel
+class Emitter
 
-  constructor: (@name, @transport)->
-    assert is_string @name
-    @transport ?= Local.create()
+  constructor: (@transport, @name)->
     @handlers = {}
 
   emit: map (event, args...) ->
     assert is_string event
-    @transport.send @name, [ event, args...]
+    handlers = (@handlers[event] ?= [])
+    (handler args...) for handler in handlers
     unless event in ["_", "*"]
       @emit "_", args...
       @emit "*", args...
@@ -33,7 +30,6 @@ class Channel
     assert is_function handler
     handlers = (@handlers[event] ?= [])
     handlers.push handler
-    @listen()
 
   once: map (event, handler) ->
     assert is_string event
@@ -43,7 +39,6 @@ class Channel
       @remove event, handler
     handlers = (@handlers[event] ?= [])
     handlers.push _handler
-    @listen()
 
   remove: map (event, handler) ->
     assert is_string event
@@ -57,20 +52,7 @@ class Channel
     emit = (args...)-> emitter.emit event, args...
     @on event, emit
 
-  listen: async ->
-    unless @listening
-      @listening = true
-      @done = false
-      until @done
-        [event, args...] = yield @transport.receive @name
-        handlers = (@handlers[event] ?= [])
-        (handler args...) for handler in handlers
-
-  close: ->
-    @done = true
-    @transport.close()
-
-  @create: (args...) -> new Channel args...
+  @create: -> new Emitter
 
 
-module.exports = Channel
+module.exports = Emitter

@@ -1,42 +1,26 @@
 {
   "name": "mutual",
-  "version": "0.4.18",
-  "description": "Scala-inspired Actors that use Redis as a message transport",
+  "version": "1.0.0-alpha-01",
+  "description": "TBD",
   "main": "lib/index.js",
   "scripts": {
-    "test": "rake test"
+    "prepublish": "coffee --nodejs --harmony --compile -o ./lib ./src",
+    "watch": "coffee --nodejs --harmony --compile --watch -o lib/ ./src",
+    "test": "coffee --nodejs --harmony test/index.coffee"
   },
   "repository": {
     "type": "git",
     "url": "git://github.com/dyoder/mutual.git"
   },
-  "keywords": [
-    "scala",
-    "actor",
-    "channel",
-    "redis",
-    "message",
-    "distributed",
-    "queue",
-    "worker"
-  ],
+  "keywords": [],
   "author": "Dan Yoder",
   "license": "MIT",
   "readmeFilename": "README.md",
-  "scripts": {
-    "prepublish": "coffee -o lib/ -c src/*.coffee"
-  },
   "dependencies": {
-    "fairmont": "0.7.x",
-    "generic-pool": "~2.1.1",
-    "key-forge": "~0.1.3",
-    "pirate": "~0.9.7",
-    "redis": "0.8.x",
-    "typely": "0.0.x",
-    "when": "~3.6.2"
+    "redis": "^0.12.1",
+    "when": "^3.7.2"
   },
   "devDependencies": {
-    "testify": "0.2.9",
-    "express": "~3.3.5"
+    "fairmont": "^1.0.0-alpha-14"
   }
 }
