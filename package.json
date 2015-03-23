@@ -6,7 +6,8 @@
   "scripts": {
     "prepublish": "coffee --nodejs --harmony --compile -o ./lib ./src",
     "watch": "coffee --nodejs --harmony --compile --watch -o lib/ ./src",
-    "test": "coffee --nodejs --harmony test/index.coffee"
+    "test": "coffee --nodejs --harmony test/index.coffee",
+    "examples": "coffee --nodejs --harmony examples/index.coffee"
   },
   "repository": {
     "type": "git",

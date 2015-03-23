@@ -6,7 +6,7 @@ To use Mutual, you simply create a `Channel` and subscribe to the events you're 
 
 ```coffee
 {Channel} = require "mutual"
-channel = Channel.create()
+channel = Channel.create "hello"
 
 channel.on message: (message) ->
   assert message == "Hello, World"
@@ -20,7 +20,7 @@ We can communicate remotely the same way just by adding a `Transport`.
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Broadcast.Redis.create()
-channel = Channel.create transport,  "hello-world"
+channel = Channel.create transport,  "hello"
 
 channel.on message: (message) ->
   assert message == "Hello, World"
@@ -30,7 +30,7 @@ channel.on message: (message) ->
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Broadcast.Redis.create()
-channel = Channel.create transport,  "hello-world"
+channel = Channel.create transport,  "hello"
 
 channel.emit message: "Hello, World"
 ```
@@ -43,7 +43,7 @@ Let's switch from a `Broadcast` channel to a `Queue` channel.
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Queue.Redis.create()
-channel = Channel.create transport,  "hello-world"
+channel = Channel.create transport,  "hello"
 
 channel.on message: (message) ->
   assert message == "Hello, World"
@@ -53,7 +53,7 @@ channel.on message: (message) ->
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Queue.Redis.create()
-channel = Channel.create transport,  "hello-world"
+channel = Channel.create transport,  "hello"
 
 channel.emit message: "Hello, World"
 ```
@@ -107,7 +107,7 @@ channels = new Proxy {},
     get: (ch, name) -> ch[name] ?= make_channel name
 
 handlers =
-  
+
   get: async ({respond, match: {path: {channel}}}) ->
     channels[channel].once message: (body) -> respond 200, body
 

@@ -26,32 +26,43 @@ class Transport
   constructor: (options={}) ->
     @options = merge Transport.defaults, options
     @pool = []
+    @closed = false
     process.on "exit", => @close
 
   acquire: async (f) ->
+
     client = if empty @pool
       yield create_client @options
     else
       @pool.shift()
-    release = (client) => @pool.push client
+
+    # if the transport is closed, just quit the client
+    # otherwise return it to the pool
+    release = (client) =>
+      if @closed
+        client.quit()
+      else
+        @pool.push client
+
     f client, release
 
   send: (channel, message) ->
     @acquire async (client, release) ->
-      result = yield client.lpush channel, JSON.stringify message
+      result = yield client.lpush channel, message
       release client
       result
 
   receive: (channel) ->
     {timeout} = @options
     @acquire async (client, release) ->
-      (result = yield client.brpop channel, timeout) until result
+      result = yield client.brpop channel, timeout
       release client
-      JSON.parse second result
+      # strip the key name from the result
+      if is_array result then second result else result
 
-  close: async ->
-    yield sleep @options.timeout * 1000
-    client.quit() for client in @pool
+  close: ->
+    @closed = true # all outstanding clients will close on their own
+    @pool.shift().quit() until empty @pool
 
   @create: (args... ) -> new Transport
 

@@ -20,10 +20,11 @@ class Channel
     assert is_string @name
     @transport ?= Local.create()
     @handlers = {}
+    @closed = @listening = false
 
   emit: map (event, args...) ->
     assert is_string event
-    @transport.send @name, [ event, args...]
+    @transport.send @name, JSON.stringify [ event, args...]
     unless event in ["_", "*"]
       @emit "_", args...
       @emit "*", args...
@@ -60,15 +61,18 @@ class Channel
   listen: async ->
     unless @listening
       @listening = true
-      @done = false
-      until @done
-        [event, args...] = yield @transport.receive @name
-        handlers = (@handlers[event] ?= [])
-        (handler args...) for handler in handlers
+      until @closed
+        result = yield @transport.receive @name
+        if result
+          [event, args...] = JSON.parse result
+          handlers = (@handlers[event] ?= [])
+          (handler args...) for handler in handlers
+      @listening = false
 
   close: ->
-    @done = true
+    @closed = true
     @transport.close()
+
 
   @create: (args...) -> new Channel args...
 
