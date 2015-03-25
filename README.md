@@ -19,7 +19,7 @@ We can communicate remotely the same way just by adding a `Transport`.
 **Client**
 ```coffee
 {Channel, Transport} = require "mutual"
-transport = Transport.Broadcast.Redis.create()
+transport = Transport.Redis.Broadcast.create()
 channel = Channel.create "hello", transport
 
 channel.on message: (message) ->
@@ -29,7 +29,7 @@ channel.on message: (message) ->
 **Server**
 ```coffee
 {Channel, Transport} = require "mutual"
-transport = Transport.Broadcast.Redis.create()
+transport = Transport.Redis.Broadcast.create()
 channel = Channel.create "hello", transport
 
 channel.emit message: "Hello, World"
@@ -42,7 +42,7 @@ Let's switch from a `Broadcast` channel to a `Queue` channel.
 **Client**
 ```coffee
 {Channel, Transport} = require "mutual"
-transport = Transport.Queue.Redis.create()
+transport = Transport.Redis.Queue.create()
 channel = Channel.create "hello", transport
 
 channel.on message: (message) ->
@@ -52,7 +52,7 @@ channel.on message: (message) ->
 **Server**
 ```coffee
 {Channel, Transport} = require "mutual"
-transport = Transport.Queue.Redis.create()
+transport = Transport.Redis.Queue.create()
 channel = Channel.create "hello", transport
 
 channel.emit message: "Hello, World"
@@ -65,7 +65,7 @@ Using a `Queue` channel, you can implement Workers.
 **Worker**
 ```coffee
 {Channel, Transport} = require "mutual"
-transport = Transport.Queue.Redis.create()
+transport = Transport.Redis.Queue.create()
 tasks = Channel.create "hello-world-tasks", transport
 results = Channel.create "hello-world-results", transport
 
@@ -76,7 +76,7 @@ tasks.on task: ({name}) ->
 **Dispatcher**
 ```coffee
 {Channel, Transport} = require "mutual"
-transport = Transport.Queue.Redis.create()
+transport = Transport.Redis.Queue.create()
 tasks = Channel.create "hello-world-tasks", transport
 results = Channel.create "hello-world-results", transport
 
