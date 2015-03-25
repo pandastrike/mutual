@@ -1,5 +1,3 @@
-require "./evie"
 require "./transport"
 require "./local"
 require "./remote"
-require "./pattern"

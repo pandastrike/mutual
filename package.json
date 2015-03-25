@@ -18,6 +18,7 @@
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
+    "evie-wildcards": "^1.0.0-alpha-01",
     "redis": "^0.12.1",
     "when": "^3.7.2"
   },

@@ -1,7 +1,7 @@
 {promise, resolve} = require "when"
 {async, is_string, is_object, is_function, empty, first} = require "fairmont"
 Local = require "./transport/local"
-PatternSet = require "./pattern-set"
+PatternSet = require "evie-wildcards"
 
 assert = (x) ->
   throw new TypeError unless x
@@ -39,13 +39,9 @@ class Channel
   once: map (event, handler) ->
     assert is_string event
     assert is_function handler
-    _handler = (args...) =>
+    @on event, (args...) =>
       handler args...
       @remove event, handler
-    @patterns.add event
-    handlers = (@handlers[event] ?= [])
-    handlers.push _handler
-    @listen()
 
   remove: map (event, handler) ->
     assert is_string event
