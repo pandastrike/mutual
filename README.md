@@ -20,7 +20,7 @@ We can communicate remotely the same way just by adding a `Transport`.
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Broadcast.Redis.create()
-channel = Channel.create transport,  "hello"
+channel = Channel.create "hello", transport
 
 channel.on message: (message) ->
   assert message == "Hello, World"
@@ -30,7 +30,7 @@ channel.on message: (message) ->
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Broadcast.Redis.create()
-channel = Channel.create transport,  "hello"
+channel = Channel.create "hello", transport
 
 channel.emit message: "Hello, World"
 ```
@@ -43,7 +43,7 @@ Let's switch from a `Broadcast` channel to a `Queue` channel.
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Queue.Redis.create()
-channel = Channel.create transport,  "hello"
+channel = Channel.create "hello", transport
 
 channel.on message: (message) ->
   assert message == "Hello, World"
@@ -53,7 +53,7 @@ channel.on message: (message) ->
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Queue.Redis.create()
-channel = Channel.create transport,  "hello"
+channel = Channel.create "hello", transport
 
 channel.emit message: "Hello, World"
 ```
@@ -66,8 +66,8 @@ Using a `Queue` channel, you can implement Workers.
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Queue.Redis.create()
-tasks = Channel.create transport,  "hello-world-tasks"
-results = Channel.create transport,  "hello-world-results"
+tasks = Channel.create "hello-world-tasks", transport
+results = Channel.create "hello-world-results", transport
 
 tasks.on task: ({name}) ->
   results.emit result: "Hello, #{name}"
@@ -77,8 +77,8 @@ tasks.on task: ({name}) ->
 ```coffee
 {Channel, Transport} = require "mutual"
 transport = Transport.Queue.Redis.create()
-tasks = Channel.create transport,  "hello-world-tasks"
-results = Channel.create transport,  "hello-world-results"
+tasks = Channel.create "hello-world-tasks", transport
+results = Channel.create "hello-world-results", transport
 
 tasks.emit task: name: "World"
 results.on result: (greeting) ->
@@ -91,7 +91,7 @@ Let's implement a simple long-polling chat API using Queue channels.
 ```coffee
 {Builder} = require "pbx-builder"
 {processor} = require "pbx-processor"
-{async, partial} = require "fairmont"
+{async, partial, _} = require "fairmont"
 
 builder = Builder.create "chat-api"
 builder.define "message",
@@ -101,7 +101,7 @@ builder.define "message",
 .base_url "localhost:8080"
 
 transport = Transport.local
-make_channel = partial Channel.create transport
+make_channel = partial Channel.create _, transport
 
 channels = new Proxy {},
     get: (ch, name) -> ch[name] ?= make_channel name
