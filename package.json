@@ -20,10 +20,12 @@
   "dependencies": {
     "evie": "^1.0.0-alpha-02",
     "evie-wildcards": "^1.0.0-alpha-01",
+    "fairmont": "^1.0.0-alpha-14",
     "redis": "^0.12.1",
     "when": "^3.7.2"
   },
   "devDependencies": {
-    "fairmont": "^1.0.0-alpha-14"
+    "amen": "^1.0.0-alpha-06",
+    "key-forge": "^1.0.0-beta-01"
   }
 }
