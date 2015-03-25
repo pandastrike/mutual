@@ -1,6 +1,7 @@
 {promise, resolve} = require "when"
 {async, is_string, is_object, is_function, empty, first} = require "fairmont"
 Local = require "./transport/local"
+PatternSet = require "./pattern-set"
 
 assert = (x) ->
   throw new TypeError unless x
@@ -20,18 +21,17 @@ class Channel
     assert is_string @name
     @transport ?= Local.create()
     @handlers = {}
+    @patterns = new PatternSet
     @closed = @listening = false
 
   emit: map (event, args...) ->
     assert is_string event
     @transport.send @name, JSON.stringify [ event, args...]
-    unless event in ["_", "*"]
-      @emit "_", args...
-      @emit "*", args...
 
   on: map (event, handler) ->
     assert is_string event
     assert is_function handler
+    @patterns.add event
     handlers = (@handlers[event] ?= [])
     handlers.push handler
     @listen()
@@ -42,6 +42,7 @@ class Channel
     _handler = (args...) =>
       handler args...
       @remove event, handler
+    @patterns.add event
     handlers = (@handlers[event] ?= [])
     handlers.push _handler
     @listen()
@@ -65,8 +66,9 @@ class Channel
         result = yield @transport.receive @name
         if result
           [event, args...] = JSON.parse result
-          handlers = (@handlers[event] ?= [])
-          (handler args...) for handler in handlers
+          @patterns.match event, (event) =>
+            handlers = (@handlers[event] ?= [])
+            (handler args...) for handler in handlers
       @listening = false
 
   close: ->
