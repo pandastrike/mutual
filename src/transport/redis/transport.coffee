@@ -1,6 +1,6 @@
 {promise} = require "when"
 {lift} = require "when/node"
-{sleep, call, async, merge, empty, is_array, second, remove} = require "fairmont"
+{async, merge, empty} = require "fairmont"
 redis = require "redis"
 
 create_client = (options) ->
@@ -13,6 +13,8 @@ create_client = (options) ->
         _client.brpop = lift _client.brpop
         _client.lpush = lift _client.lpush
         _client.quit = lift _client.quit
+        _client.publish = lift _client.publish
+        # _client.subscribe = lift _client.subscribe
         resolve _client
 
 class Transport
@@ -47,23 +49,11 @@ class Transport
     f client, release
 
   send: (channel, message) ->
-    @acquire async (client, release) ->
-      result = yield client.lpush channel, message
-      release client
-      result
 
   receive: (channel) ->
-    {timeout} = @options
-    @acquire async (client, release) ->
-      result = yield client.brpop channel, timeout
-      release client
-      # strip the key name from the result
-      if is_array result then second result else result
 
   close: ->
     @closed = true # all outstanding clients will close on their own
     @pool.shift().quit() until empty @pool
-
-  @create: (args... ) -> new Transport
 
 module.exports = Transport

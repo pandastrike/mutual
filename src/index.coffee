@@ -4,3 +4,4 @@ module.exports =
     Local: require "./transport/local"
     Redis:
       Queue: require "./transport/redis/queue"
+      Broadcast: require "./transport/redis/broadcast"

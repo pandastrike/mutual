@@ -59,8 +59,8 @@ class Channel
     unless @listening
       @listening = true
       until @closed
-        result = yield @transport.receive @name
-        if result
+        result = (yield (@transport.receive @name))
+        if result?
           [event, args...] = JSON.parse result
           @patterns.match event, (event) =>
             handlers = (@handlers[event] ?= [])
