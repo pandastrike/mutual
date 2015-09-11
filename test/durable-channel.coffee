@@ -111,8 +111,8 @@ testify.test "A durable channel", (context) ->
     redisOptions.poolSize = 1000
 
     transport = new RedisTransport redisOptions
-
     worker = new DurableChannel({name: "worker-5", redis: redisOptions})
+    dispatchers = []
 
     context.test "sending 1K messages", (context) ->
       endWhenDone = ->
@@ -120,6 +120,8 @@ testify.test "A durable channel", (context) ->
           setTimeout ->
             transport.end()
             worker.end()
+            for dispatcher in dispatchers
+              dispatcher.end()
             if messageCount < timeouts + replies
               context.fail()
             else
@@ -129,14 +131,13 @@ testify.test "A durable channel", (context) ->
       for i in [1..messageCount]
         do ->
           dispatcher = new DurableChannel({name: "dispatcher-5-#{randomKey(16)}", redis: redisOptions, transport: transport})
+          dispatchers.push(dispatcher)
           dispatcher.listen().on "success", ->
             dispatcher.on "timeout", (message) ->
-              dispatcher.end()
               timeouts++
               endWhenDone()
             dispatcher.on "message", (message) ->
               dispatcher.close(message).on "success", ->
-                dispatcher.end()
                 replies++
                 endWhenDone()
           dispatcher.send {content: i, to: "worker-5", timeout: 2000}

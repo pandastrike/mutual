@@ -130,14 +130,16 @@ class DurableChannel extends EventChannel
         go (expiredMessages) => 
           return if expiredMessages.length == 0
           @events.source (events) =>
-            returned = 0
-            for expiredMessage in expiredMessages
-              expiredMessageTokens = expiredMessage.split("::")
-              _events = @expireMessage(expiredMessageTokens[0], expiredMessageTokens[1])
-              _events.on "success", ->
-                returned++
-                events.emit("success") if returned == expiredMessages.length
-              _events.on "error", (err) -> events.emit "error", err
+            iterationCount = 0
+            do iterate = =>
+              if iterationCount < expiredMessages.length
+                expiredMessageTokens = expiredMessages[iterationCount].split("::")
+                iterationCount++
+                _events = @expireMessage(expiredMessageTokens[0], expiredMessageTokens[1])
+                _events.on "success", -> iterate()
+                _events.on "error", -> iterate()
+              else
+                events.emit("success")
         go => 
           if !@ending
             @timeoutMonitor = setTimeout(loopToMonitor, @timeoutMonitorFrequency)
