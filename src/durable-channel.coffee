@@ -84,14 +84,32 @@ class DurableChannel extends EventChannel
 
   setMessageTimeout: (name, channel, id, timeout) ->
     if channel? and id? and timeout?
-      @events.source (events) =>
-        @transport._acquire (client) =>
-          client.zadd(
-            ["#{name}.pending", (Date.now() + timeout), "#{channel}::#{id}"], 
-            (err, data) =>
-              @transport._release client
-              events.callback(err, data)
-          )
+      client = null
+      serverTime = 0
+      do @events.serially (go) =>
+        go =>
+          @events.source (events) =>
+            @transport._acquire (_client) =>
+              client = _client
+              events.callback()
+        go =>
+          @events.source (events) =>
+            client.time(
+              (err, data) =>
+                if err?
+                  @transport._release client
+                else
+                  serverTime = data[0] * 1000
+                events.callback(err, data)
+            )
+        go =>
+          @events.source (events) =>
+            client.zadd(
+              ["#{name}.pending", (serverTime + timeout), "#{channel}::#{id}"], 
+              (err, data) =>
+                @transport._release client
+                events.callback(err, data)
+            )
 
   clearMessageTimeout: (name, channel, id) ->
     if id?
@@ -118,15 +136,31 @@ class DurableChannel extends EventChannel
   monitorTimeouts: ->
     loopToMonitor = =>
       do @events.serially (go) =>
+        client = null
+        serverTime = 0
         go =>
           @events.source (events) =>
-            @transport._acquire (client) =>
-              client.zrangebyscore(
-                ["#{@name}.pending", 0, Date.now()]
-                (err, data) =>
-                  @transport._release client 
-                  events.callback(err, data)
-              )
+            @transport._acquire (_client) =>
+              client = _client
+              events.callback()
+        go =>
+          @events.source (events) =>
+            client.time(
+              (err, data) =>
+                if err?
+                  @transport._release client
+                else
+                  serverTime = data[0] * 1000
+                events.callback(err, data)
+            )
+        go =>
+          @events.source (events) =>
+            client.zrangebyscore(
+              ["#{@name}.pending", 0, serverTime]
+              (err, data) =>
+                @transport._release client 
+                events.callback(err, data)
+            )
         go (expiredMessages) => 
           return if expiredMessages.length == 0
           @events.source (events) =>
